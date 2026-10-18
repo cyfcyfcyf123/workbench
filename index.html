@@ -1,0 +1,2498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>薄荷工作台 · 本地学习工作台</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#72C894">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="薄荷工作台">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+/* ==================== 基础与主题 ==================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --green: #72C894;
+  --green-dark: #57b47d;
+  --green-deep: #3f9c6b;
+  --green-100: #e9f6ef;
+  --green-50: #f5fbf8;
+  --text: #2d3b34;
+  --muted: #7f9589;
+  --line: #e6f1ea;
+  --red: #d98b8b;
+  --radius: 14px;
+}
+html, body { height: 100%; }
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px; line-height: 1.65; color: var(--text); background: #fff;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;   /* 手机点按不出现灰块 */
+  overscroll-behavior-y: none;
+}
+button, a, label, .nav-item, .check { touch-action: manipulation; }   /* 去掉移动端 300ms 点击延迟 */
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, select, textarea { font-family: inherit; font-size: 14px; color: var(--text); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #dcebe3; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.app { display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
+
+/* ==================== 左侧导航 ==================== */
+.sidebar {
+  width: 214px; flex: 0 0 214px; background: var(--green); color: #fff;
+  display: flex; flex-direction: column; padding: 20px 14px 16px;
+}
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 6px 18px; }
+.brand .logo { font-size: 22px; }
+.brand h1 { font-size: 16px; font-weight: 600; letter-spacing: .5px; }
+.brand p { font-size: 11px; font-weight: 400; opacity: .82; }
+.nav { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.nav::-webkit-scrollbar { width: 6px; }
+.nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.35); }
+.nav-item {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+  padding: 8px 12px; border-radius: 10px; font-size: 13.5px;
+  color: rgba(255,255,255,.94); transition: background .15s ease;
+}
+.nav-item:hover { background: rgba(255,255,255,.16); }
+.nav-item.active { background: #fff; color: var(--green-deep); font-weight: 600; }
+.nav-item .ico { width: 18px; text-align: center; font-size: 14px; }
+.nav-item .count {
+  margin-left: auto; font-size: 11px; padding: 1px 7px;
+  border-radius: 8px; background: rgba(255,255,255,.25);
+}
+.nav-item.active .count { background: var(--green-100); color: var(--green-deep); }
+.sidebar-foot { padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.sf-row { display: flex; gap: 6px; }
+.sidebar-foot button {
+  flex: 1; font-size: 12px; padding: 7px 0; border-radius: 9px;
+  background: rgba(255,255,255,.18); color: #fff; white-space: nowrap;
+}
+.sidebar-foot button:hover { background: rgba(255,255,255,.32); }
+.sidebar-foot button:disabled { opacity: .55; cursor: default; }
+.sync-state { font-size: 11px; text-align: center; color: rgba(255,255,255,.86); }
+.sync-state b { font-weight: 600; }
+
+/* ==================== 主内容区 ==================== */
+.main { flex: 1; overflow-y: auto; background: #fbfefc; }
+.topbar {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center;
+  justify-content: space-between; gap: 16px; padding: 16px 28px;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar h2 { font-size: 19px; font-weight: 600; }
+.topbar .muted { font-size: 12.5px; color: var(--muted); }
+.view { padding: 22px 28px 64px; }
+
+/* 按钮 */
+.btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; }
+.btn.primary { background: var(--green); color: #fff; }
+.btn.primary:hover { background: var(--green-dark); }
+.btn.ghost { background: var(--green-50); color: var(--green-deep); border: 1px solid var(--line); }
+.btn.ghost:hover { background: var(--green-100); }
+
+/* 统计条 */
+.stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.stat {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 11px 18px; min-width: 118px;
+}
+.stat .label { font-size: 12px; color: var(--muted); }
+.stat .value { font-size: 18px; font-weight: 600; color: var(--green-deep); }
+
+/* 工具条 */
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.toolbar .tip { font-size: 12.5px; color: var(--muted); }
+.search {
+  width: 220px; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--green-50); outline: none;
+}
+.search:focus { border-color: var(--green); background: #fff; }
+
+/* 卡片列表 */
+.list { display: grid; grid-template-columns: repeat(auto-fill, minmax(318px, 1fr)); gap: 14px; }
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.card:hover { border-color: #cfe9dc; }
+.card-head { display: flex; align-items: flex-start; gap: 8px; }
+.card-title { flex: 1; font-size: 14.5px; font-weight: 600; word-break: break-word; }
+.card.done .card-title { color: var(--muted); text-decoration: line-through; }
+.card-actions { display: flex; gap: 4px; opacity: .5; transition: opacity .15s; }
+.card:hover .card-actions { opacity: 1; }
+.mini-btn { font-size: 12px; padding: 2px 7px; border-radius: 7px; background: var(--green-50); color: var(--muted); }
+.mini-btn:hover { background: var(--green-100); color: var(--green-deep); }
+.mini-btn.danger:hover { background: #fdeeee; color: #c96a6a; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 11.5px; padding: 2px 8px; border-radius: 8px; background: var(--green-100); color: var(--green-deep); }
+.tag.gray { background: #f1f4f2; color: var(--muted); }
+.tag.red { background: #fdeeee; color: #c96a6a; }
+.tag.blue { background: #eef4fd; color: #5b7fb0; }
+.tag.orange { background: #fdf3e7; color: #c08a44; }
+.card-text { font-size: 13px; color: #5b6f64; white-space: pre-wrap; word-break: break-word; }
+.card-foot { margin-top: auto; font-size: 11.5px; color: #a9bdb2; }
+.check {
+  flex: 0 0 20px; width: 20px; height: 20px; margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--green); border-radius: 6px;
+  color: #fff; font-size: 12px; line-height: 1;
+}
+.check.on { background: var(--green); }
+
+/* 空状态 */
+.empty {
+  padding: 42px; text-align: center; font-size: 13px; color: var(--muted);
+  border: 1px dashed var(--line); border-radius: var(--radius); background: var(--green-50);
+}
+
+/* 仪表盘 */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.panel {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px;
+  transition: border-color .18s ease, box-shadow .18s ease, opacity .18s ease;
+}
+.panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.panel-head h3 { font-size: 14px; font-weight: 600; }
+.panel-head .more { font-size: 12px; color: var(--green-deep); }
+.panel-head .more:hover { text-decoration: underline; }
+.ph-title { display: flex; align-items: center; min-width: 0; }
+
+/* ---------- 仪表盘卡片拖拽排序 ---------- */
+.drag-handle {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; margin-right: 6px; border-radius: 8px;
+  color: #bdd5c7; cursor: grab; touch-action: none;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  transition: color .16s ease, background .16s ease;
+}
+.drag-handle svg { fill: currentColor; display: block; }
+.drag-handle:hover { color: var(--green-deep); background: var(--green-50); }
+.drag-handle:active { cursor: grabbing; }
+/* 被拖走后留在原位的“空位” */
+.panel.drag-src {
+  opacity: .35; border-style: dashed; border-color: #bfe3ce;
+  background: var(--green-50); box-shadow: none;
+}
+/* 跟着指尖/鼠标走的浮起卡片：外层负责位移，内层负责抬起动效 */
+.drag-ghost { position: fixed; left: 0; top: 0; z-index: 200; pointer-events: none; will-change: transform; }
+.drag-ghost > .panel { box-shadow: 0 16px 34px rgba(63, 156, 107, .20); border-color: #bfe3ce; }
+.drag-lift { transform: scale(1.02); transition: transform .18s ease, box-shadow .18s ease; }
+body.dragging { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+body.dragging .panel:hover { box-shadow: none; }
+
+/* 设置页：模块顺序 */
+.order-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.order-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 4px 5px 4px 11px; font-size: 12.5px; color: #4b5f55;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--green-50);
+}
+.ord-btn {
+  width: 22px; height: 22px; border-radius: 7px; font-size: 12px; line-height: 1;
+  color: var(--green-deep); transition: background .16s ease;
+}
+.ord-btn:hover:not(:disabled) { background: #fff; }
+.ord-btn:disabled { opacity: .28; cursor: default; }
+.preview { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+.preview li { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: #4b5f55; }
+.preview li .dot { flex: 0 0 5px; width: 5px; height: 5px; margin-top: 8px; border-radius: 50%; background: var(--green); }
+.preview li .t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview li .d { font-size: 11.5px; color: #a9bdb2; }
+.preview .none { font-size: 12.5px; color: #a9bdb2; }
+
+/* ==================== 弹窗 ==================== */
+.mask {
+  position: fixed; inset: 0; z-index: 50; padding: 20px;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(45, 59, 52, .28);
+}
+.mask.show { display: flex; }
+.modal {
+  width: 100%; max-width: 520px; max-height: 88vh; overflow: hidden;
+  display: flex; flex-direction: column; background: #fff; border-radius: 16px;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 15px 20px; border-bottom: 1px solid var(--line);
+}
+.modal-head h3 { font-size: 15.5px; }
+.icon-btn { padding: 4px 8px; border-radius: 8px; font-size: 14px; color: var(--muted); }
+.icon-btn:hover { background: var(--green-50); }
+.modal-body { padding: 18px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 12.5px; font-weight: 500; color: #5b6f64; }
+.field label i { font-style: normal; color: var(--red); }
+.field input[type=text], .field input[type=date], .field input[type=number],
+.field input[type=url], .field select, .field textarea {
+  width: 100%; padding: 9px 12px; border-radius: 10px; outline: none;
+  border: 1px solid var(--line); background: var(--green-50); resize: vertical;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--green); background: #fff; }
+.field .cb { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.field .cb input { width: 16px; height: 16px; accent-color: var(--green); }
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 20px; border-top: 1px solid var(--line);
+}
+
+/* 提示 */
+.toast {
+  position: fixed; left: 50%; bottom: 34px; z-index: 99;
+  padding: 9px 18px; border-radius: 10px; font-size: 13px;
+  background: var(--green-deep); color: #fff;
+  opacity: 0; pointer-events: none;
+  transform: translateX(-50%) translateY(12px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ==================== 设置页 / 同步 ==================== */
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.panel .panel-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.panel .panel-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hint { font-size: 12.5px; color: var(--muted); line-height: 1.8; }
+.hint code {
+  background: var(--green-50); border: 1px solid var(--line); border-radius: 6px;
+  padding: 1px 6px; font-size: 12px; color: var(--green-deep);
+}
+.hint ol, .hint ul { margin: 4px 0 0 18px; }
+.hint li { margin-bottom: 3px; }
+.kv { display: flex; flex-wrap: wrap; gap: 10px 26px; font-size: 13px; }
+.kv div span { color: var(--muted); margin-right: 6px; }
+.kv div b { font-weight: 600; color: var(--green-deep); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; }
+.dot.off { background: #dcae6a; }
+.btn.busy { opacity: .6; pointer-events: none; }
+.btn.sm { padding: 6px 12px; font-size: 12.5px; }
+.pw-wrap { display: flex; gap: 8px; }
+.pw-wrap input { flex: 1; }
+.tag.mono { font-family: Consolas, Monaco, monospace; letter-spacing: .3px; }
+
+/* 冲突选择弹窗 */
+.conflict-list { display: flex; flex-direction: column; gap: 10px; }
+.conflict {
+  border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+  background: var(--green-50);
+}
+.conflict .cf-head { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.conflict .cf-head span { font-weight: 400; color: var(--muted); font-size: 12px; }
+.choice { display: flex; gap: 8px; flex-wrap: wrap; }
+.choice label {
+  flex: 1 1 150px; display: flex; align-items: center; gap: 7px; cursor: pointer;
+  padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: #fff; font-size: 12.5px;
+}
+.choice label input { accent-color: var(--green); }
+.choice label:has(input:checked) { border-color: var(--green); background: var(--green-100); }
+.choice label i { font-style: normal; color: var(--muted); font-size: 11.5px; margin-left: auto; }
+.conflict-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.conflict-tools .tip { font-size: 12.5px; color: var(--muted); }
+
+/* ==================== 图表 ==================== */
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(298px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.chart-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.chart-head h3 { font-size: 14px; font-weight: 600; }
+.chart-head .sub { font-size: 12px; color: var(--muted); font-weight: 400; }
+.chart-svg { display: block; width: 100%; height: auto; }
+.chart-empty { padding: 34px 0; text-align: center; color: var(--muted); font-size: 12.5px; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #4b5f55; }
+.chart-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; }
+.chart-select {
+  padding: 6px 10px; border: 1px solid var(--line); border-radius: 9px;
+  background: var(--green-50); font-size: 12.5px; outline: none;
+}
+.chart-select:focus { border-color: var(--green); }
+
+/* 置顶卡片 */
+.card.pinned { border-color: #b7e2c9; box-shadow: inset 3px 0 0 var(--green); }
+.pin { font-size: 12px; margin-right: 2px; }
+
+/* 提醒横幅 */
+.banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; margin-bottom: 16px; border-radius: var(--radius);
+  background: #fdf4f1; border: 1px solid #f2dcd5; font-size: 13px; color: #7a5b52;
+}
+.banner .b-ico { font-size: 17px; line-height: 1.3; }
+.banner .b-item { display: block; margin-top: 2px; }
+.banner b { color: #c96a6a; font-weight: 600; }
+.banner.ok { background: var(--green-50); border-color: var(--line); color: var(--green-deep); }
+.banner.ok b { color: var(--green-deep); }
+
+/* ==================== 触控适配（手机 / 平板） ==================== */
+@media (hover: none) {
+  .card-actions { opacity: 1; }
+  .mini-btn { padding: 5px 10px; }
+  .nav-item:hover, .card:hover { background: none; }
+  .nav-item.active { background: #fff; }
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 760px) {
+  .sidebar { width: 62px; flex: 0 0 62px; padding: 16px 8px 12px; }
+  .brand h1, .brand p, .nav-item .txt, .nav-item .count, .sidebar-foot { display: none; }
+  .brand { justify-content: center; padding-bottom: 14px; }
+  .nav-item { justify-content: center; padding: 11px 0; }
+  .nav-item .ico { width: auto; font-size: 17px; }
+  .topbar, .view { padding-left: 16px; padding-right: 16px; }
+  .topbar { flex-wrap: wrap; row-gap: 10px; }
+  .topbar h2 { font-size: 17px; }
+  .search { width: 140px; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .charts { grid-template-columns: 1fr; }
+  /* 触控友好尺寸 */
+  .btn { min-height: 40px; padding: 9px 16px; }
+  .mini-btn { padding: 6px 11px; font-size: 12.5px; }
+  .field input[type=text], .field input[type=date], .field input[type=number],
+  .field input[type=url], .field select, .field textarea { font-size: 16px; padding: 10px 12px; }
+  .field .cb { font-size: 14px; }
+  .field .cb input { width: 19px; height: 19px; }
+  .check { width: 24px; height: 24px; flex: 0 0 24px; border-radius: 7px; }
+  /* 弹窗接近全屏，按钮更易点 */
+  .mask { padding: 0; align-items: flex-end; }
+  .modal { max-width: 100%; max-height: 94dvh; border-radius: 16px 16px 0 0; }
+  .modal-foot { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .modal-foot .btn { flex: 1; }
+  .choice label { flex: 1 1 100%; padding: 10px; }
+  .toast { bottom: calc(20px + env(safe-area-inset-bottom)); }
+  .stat { flex: 1 1 calc(50% - 12px); min-width: 0; padding: 10px 14px; }
+  .stat .value { font-size: 16px; }
+  .list { grid-template-columns: 1fr; }
+  /* 拖拽手柄 / 顺序按钮放大到适合手指点 */
+  .drag-handle { width: 34px; height: 34px; margin-right: 4px; }
+  .drag-handle svg { width: 16px; height: 16px; }
+  .order-chip { padding: 6px 6px 6px 12px; font-size: 13px; }
+  .ord-btn { width: 26px; height: 26px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 左侧导航 -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="logo">🌿</span>
+      <div>
+        <h1>薄荷工作台</h1>
+        <p>本地存储 · 无需登录</p>
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidebar-foot">
+      <div class="sf-row">
+        <button id="pullBtn" data-sync="pull" title="从 Gist 拉取并合并">☁ 拉取</button>
+        <button id="pushBtn" data-sync="push" title="合并后上传到 Gist">⤴ 保存</button>
+      </div>
+      <div class="sf-row">
+        <button id="exportBtn" title="导出全部数据为 JSON">导出</button>
+        <button id="clearBtn" title="清空全部本地数据">清空</button>
+      </div>
+      <div class="sync-state" id="syncState">未配置云端同步</div>
+    </div>
+  </aside>
+
+  <!-- 主内容区 -->
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h2 id="pageTitle">首页仪表盘</h2>
+        <p class="muted" id="pageDesc">各模块最新动态一览</p>
+      </div>
+      <div id="topbarActions"></div>
+    </header>
+    <section class="view" id="view"></section>
+  </main>
+</div>
+
+<!-- 新增 / 编辑 弹窗 -->
+<div class="mask" id="mask">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">新增</h3>
+      <button class="icon-btn" id="modalClose" title="关闭">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="modalCancel">取消</button>
+      <button class="btn primary" id="modalSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 同步冲突选择弹窗 -->
+<div class="mask" id="cfMask">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="cfTitle">检测到冲突</h3>
+      <button class="icon-btn" id="cfClose" title="取消同步">✕</button>
+    </div>
+    <div class="modal-body" id="cfBody"></div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="cfCancel">取消同步</button>
+      <button class="btn primary" id="cfApply">确认合并</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================
+ * 薄荷工作台 —— 单页本地工作台
+ * 结构：数据层 → 模块配置 → 工具函数 → 渲染 → 事件绑定
+ * ========================================================== */
+
+/* ---------------- 1. 数据层 ---------------- */
+const STORAGE_KEY = 'mint_workbench_v1';
+const SETTINGS_KEY = 'mint_workbench_settings_v1';
+const SYNC_FILE = 'mint-workbench-data.json';   // Gist 中的数据文件名（固定）
+const GIST_API = 'https://api.github.com/gists';
+
+const EMPTY_DB = {
+  todo: [], countdown: [], review: [], study: [], exam: [], favorite: [],
+  log: [], memo: [], account: [], weight: [], summary: []
+};
+const NOTIFIED_KEY = 'mint_workbench_notified_v1';   // 考试提醒去重（仅本机）
+
+function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+let db = loadDB();
+
+function loadDB() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return withMeta(clone(EMPTY_DB));
+    return withMeta(Object.assign(clone(EMPTY_DB), JSON.parse(raw) || {}));
+  } catch (e) {
+    console.warn('本地数据读取失败，已重置', e);
+    return withMeta(clone(EMPTY_DB));
+  }
+}
+/* 保证 db 上始终存在删除标记表（用于跨设备同步删除）与卡片顺序表 */
+function withMeta(data) {
+  if (!data._deleted || typeof data._deleted !== 'object') data._deleted = {};
+  // 仪表盘卡片顺序：keys 是模块 key 的数组，updatedAt 用于跨设备比较新旧
+  if (!data._order || !Array.isArray(data._order.keys)) data._order = { keys: [], updatedAt: '' };
+  return data;
+}
+function markDeleted(id) {
+  db._deleted = db._deleted || {};
+  db._deleted[id] = nowISO();
+}
+
+/* 同步设置：Token / Gist ID / 自动同步 / 考试提醒（与业务数据分开存放） */
+const DEFAULT_SETTINGS = { token: '', gistId: '', autoPull: true, notify: false, lastSync: '', lastResult: '' };
+let settings = loadSettings();
+function loadSettings() {
+  try {
+    return Object.assign(clone(DEFAULT_SETTINGS), JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'));
+  } catch (e) {
+    return clone(DEFAULT_SETTINGS);
+  }
+}
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+  catch (e) { toast('设置保存失败'); }
+}
+function saveDB() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  } catch (e) {
+    toast('保存失败：存储空间可能已满');
+  }
+}
+
+/* ---------------- 2. 工具函数 ---------------- */
+const $ = (sel) => document.querySelector(sel);
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function nowISO() { return new Date().toISOString(); }
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return (d.getMonth() + 1) + '-' + d.getDate() + ' ' +
+         String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+/* 距目标日期剩余天数（负数表示已过期） */
+function daysLeft(dateStr) {
+  if (!dateStr) return null;
+  const t = new Date(dateStr + 'T00:00:00');
+  if (isNaN(t.getTime())) return null;
+  const n = new Date();
+  n.setHours(0, 0, 0, 0);
+  return Math.round((t - n) / 86400000);
+}
+function cut(str, n) {
+  const s = String(str || '').replace(/\s+/g, ' ').trim();
+  return s.length > n ? s.slice(0, n) + '…' : s;
+}
+function money(n) { return '¥' + (Number(n) || 0).toFixed(2); }
+function tag(text, cls) { return '<span class="tag ' + (cls || '') + '">' + esc(text) + '</span>'; }
+function monthKey(iso) {
+  const d = new Date(iso);
+  return d.getFullYear() + '-' + (d.getMonth() + 1);
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+/* ---------------- 3. 模块配置 ---------------- */
+const PRIORITY_ORDER = { '高': 0, '中': 1, '低': 2 };
+const CURRENT_MONTH = monthKey(new Date().toISOString());
+
+const REVIEW_TEMPLATES = {
+  '日复盘': '今日完成：\n\n遇到的问题：\n\n明日计划：',
+  '周复盘': '本周目标完成情况：\n\n亮点收获：\n\n不足与改进：\n\n下周重点：',
+  '阶段复盘': '阶段目标：\n\n完成度：\n\n关键收获：\n\n下一步调整：'
+};
+
+const MODULES = {
+  todo: {
+    name: '待办', icon: '✅',
+    desc: '按分类与优先级管理待办，可加标签、置顶、勾选完成',
+    checkable: true, checkKey: 'done',
+    sort: (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) ||
+      (a.done - b.done) ||
+      ((PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9)) ||
+      (new Date(b.createdAt) - new Date(a.createdAt)),
+    fields: [
+      { key: 'title', label: '待办内容', type: 'text', required: true, placeholder: '例如：完成数学第三章练习' },
+      { key: 'category', label: '分类', type: 'select', options: ['学习', '工作', '生活', '其他'], default: '学习' },
+      { key: 'priority', label: '优先级', type: 'select', options: ['高', '中', '低'], default: '中' },
+      { key: 'due', label: '截止日期', type: 'date' },
+      { key: 'tags', label: '标签', type: 'text', placeholder: '用空格或逗号分隔，例如：重要 复习' },
+      { key: 'pinned', label: '置顶', type: 'checkbox' }
+    ],
+    title: it => it.title || '未命名待办',
+    badges: it => [
+      tag(it.category || '未分类', 'gray'),
+      it.priority === '高' ? tag('高优先级', 'red')
+        : it.priority === '低' ? tag('低优先级', 'gray') : tag('中优先级', 'orange'),
+      it.due ? tag('截止 ' + it.due + (daysLeft(it.due) != null ? '（' + dayText(daysLeft(it.due)) + '）' : '')) : ''
+    ].concat(parseTags(it.tags).map(t => tag('#' + t, 'blue'))),
+    stats: items => [
+      { label: '全部', value: items.length },
+      { label: '未完成', value: items.filter(i => !i.done).length },
+      { label: '已置顶', value: items.filter(i => i.pinned).length }
+    ]
+  },
+
+  countdown: {
+    name: '倒数日', icon: '⏳',
+    desc: '记录重要事件与目标日期，自动计算剩余天数',
+    sort: (a, b) => String(a.date || '9999').localeCompare(String(b.date || '9999')),
+    fields: [
+      { key: 'title', label: '事件名称', type: 'text', required: true, placeholder: '例如：期末考试' },
+      { key: 'date', label: '目标日期', type: 'date', required: true },
+      { key: 'note', label: '备注', type: 'textarea', placeholder: '补充说明（可选）' }
+    ],
+    title: it => it.title || '未命名事件',
+    badges: it => {
+      const d = daysLeft(it.date);
+      if (d == null) return [tag('未设置日期', 'gray')];
+      const cls = d < 0 ? 'gray' : d <= 7 ? 'red' : d <= 30 ? 'orange' : '';
+      return [tag(it.date), tag(dayText(d), cls)];
+    },
+    text: it => it.note || '',
+    stats: items => {
+      const upcoming = items
+        .map(i => ({ i, d: daysLeft(i.date) }))
+        .filter(x => x.d != null && x.d >= 0)
+        .sort((a, b) => a.d - b.d)[0];
+      return [
+        { label: '事件总数', value: items.length },
+        { label: '最近事件', value: upcoming ? upcoming.i.title : '—' },
+        { label: '剩余天数', value: upcoming ? upcoming.d + ' 天' : '—' }
+      ];
+    }
+  },
+
+  review: {
+    name: '复盘', icon: '🔄',
+    desc: '日 / 周 / 阶段复盘，带固定模板与历史记录',
+    sort: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || (new Date(b.createdAt) - new Date(a.createdAt)),
+    fields: [
+      { key: 'type', label: '复盘类型', type: 'select', options: ['日复盘', '周复盘', '阶段复盘'], default: '日复盘' },
+      { key: 'date', label: '日期', type: 'date', default: todayStr() },
+      { key: 'content', label: '复盘内容', type: 'textarea', required: true, rows: 8 }
+    ],
+    title: it => it.type + ' · ' + (it.date || '未填日期'),
+    badges: it => [tag(it.date || '—', 'gray'), tag(cut(it.content, 12) || '空', 'blue')],
+    text: it => it.content || '',
+    stats: items => [
+      { label: '全部记录', value: items.length },
+      { label: '日复盘', value: items.filter(i => i.type === '日复盘').length },
+      { label: '周 / 阶段', value: items.filter(i => i.type !== '日复盘').length }
+    ]
+  },
+
+  study: {
+    name: '学习', icon: '📚',
+    desc: '记录科目、学习时长与学习小结',
+    sort: (a, b) => String(b.date || '').localeCompare(String(a.date || '')),
+    fields: [
+      { key: 'subject', label: '科目', type: 'text', required: true, placeholder: '例如：高等数学' },
+      { key: 'minutes', label: '学习时长（分钟）', type: 'number', default: 60 },
+      { key: 'date', label: '日期', type: 'date', default: todayStr() },
+      { key: 'summary', label: '学习小结', type: 'textarea', placeholder: '今天学了什么？有什么疑问？' }
+    ],
+    title: it => it.subject || '未命名科目',
+    badges: it => [tag((Number(it.minutes) || 0) + ' 分钟'), tag(it.date || '—', 'gray')],
+    text: it => it.summary || '',
+    stats: items => {
+      const total = items.reduce((s, i) => s + (Number(i.minutes) || 0), 0);
+      return [
+        { label: '学习记录', value: items.length },
+        { label: '累计时长', value: (total / 60).toFixed(1) + ' 小时' },
+        { label: '科目数', value: new Set(items.map(i => i.subject).filter(Boolean)).size }
+      ];
+    }
+  },
+
+  exam: {
+    name: '考试', icon: '✏️',
+    desc: '录入考试信息与倒计时，可设提醒、置顶，记录备考薄弱点',
+    sort: (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) ||
+      String(a.date || '9999').localeCompare(String(b.date || '9999')),
+    fields: [
+      { key: 'name', label: '考试名称', type: 'text', required: true, placeholder: '例如：英语四级' },
+      { key: 'date', label: '考试日期', type: 'date', required: true },
+      { key: 'remind', label: '提前提醒天数', type: 'number', default: 7, step: 1, min: 0, placeholder: '进入倒计时 N 天时提醒' },
+      { key: 'place', label: '考点 / 场次', type: 'text', placeholder: '例如：教学楼 A301 上午场' },
+      { key: 'weak', label: '备考薄弱点', type: 'textarea', placeholder: '例如：听力长对话、作文模板不熟' },
+      { key: 'pinned', label: '置顶', type: 'checkbox' }
+    ],
+    title: it => it.name || '未命名考试',
+    badges: it => {
+      const d = daysLeft(it.date);
+      const list = [tag(it.date || '—', 'gray')];
+      if (d != null) list.push(tag('⏰ ' + dayText(d), examLevel(d) === 'hot' ? 'red' : examLevel(d) === 'soon' ? 'orange' : ''));
+      if (it.place) list.push(tag(it.place, 'blue'));
+      if (it.pinned) list.push(tag('已置顶'));
+      return list;
+    },
+    text: it => it.weak ? '薄弱点：' + it.weak : '',
+    stats: items => {
+      const next = items.map(i => ({ i, d: daysLeft(i.date) }))
+        .filter(x => x.d != null && x.d >= 0).sort((a, b) => a.d - b.d)[0];
+      return [
+        { label: '考试总数', value: items.length },
+        { label: '最近考试', value: next ? next.i.name : '—' },
+        { label: '距考试', value: next ? next.d + ' 天' : '—' },
+        { label: '提醒中', value: items.filter(i => inRemindWindow(i)).length }
+      ];
+    }
+  },
+
+  favorite: {
+    name: '收藏', icon: '⭐',
+    desc: '保存常用链接，附加分类与备注',
+    fields: [
+      { key: 'title', label: '收藏名称', type: 'text', required: true, placeholder: '例如：数学公开课' },
+      { key: 'url', label: '链接地址', type: 'text', placeholder: 'https://...' },
+      { key: 'category', label: '分类', type: 'select', options: ['学习', '工具', '资讯', '娱乐', '其他'], default: '学习' },
+      { key: 'note', label: '备注', type: 'textarea', placeholder: '为什么收藏它？' }
+    ],
+    title: it => it.title || '未命名收藏',
+    badges: it => [tag(it.category || '未分类', 'gray')],
+    text: it => [it.url, it.note].filter(Boolean).join('\n'),
+    link: it => it.url || '',
+    stats: items => [
+      { label: '收藏总数', value: items.length },
+      { label: '分类数', value: new Set(items.map(i => i.category).filter(Boolean)).size }
+    ]
+  },
+
+  log: {
+    name: '记录', icon: '📔',
+    desc: '自由日志，随手写下想留住的片段',
+    sort: (a, b) => String(b.date || '').localeCompare(String(a.date || '')),
+    fields: [
+      { key: 'title', label: '标题', type: 'text', placeholder: '给这段记录起个名字（可选）' },
+      { key: 'date', label: '日期', type: 'date', default: todayStr() },
+      { key: 'content', label: '内容', type: 'textarea', required: true, rows: 8, placeholder: '随便写点什么…' }
+    ],
+    title: it => it.title || (it.date + ' 的记录'),
+    badges: it => [tag(it.date || '—', 'gray')],
+    text: it => it.content || '',
+    stats: items => [
+      { label: '日志总数', value: items.length },
+      { label: '本月记录', value: items.filter(i => i.date && monthKey(i.date + 'T00:00:00') === CURRENT_MONTH).length }
+    ]
+  },
+
+  memo: {
+    name: '备忘', icon: '📌',
+    desc: '快速短笔记，想到就记',
+    fields: [
+      { key: 'content', label: '备忘内容', type: 'textarea', required: true, rows: 4, placeholder: '一句话也能记' }
+    ],
+    title: it => cut(it.content, 30) || '空备忘',
+    badges: () => [],
+    text: it => '',
+    stats: items => [
+      { label: '备忘条数', value: items.length },
+      { label: '最近更新', value: items.length ? fmtTime(items[0].createdAt) : '—' }
+    ]
+  },
+
+  account: {
+    name: '记账', icon: '💰',
+    desc: '记录收入与支出，自动统计并生成图表，可导出 Excel',
+    sort: (a, b) => String(b.date || '').localeCompare(String(a.date || '')),
+    actions: () => '<button class="btn ghost" data-export="account">📊 导出Excel</button>',
+    charts: (items) => accountCharts(items),
+    fields: [
+      { key: 'type', label: '类型', type: 'select', options: ['支出', '收入'], default: '支出' },
+      { key: 'amount', label: '金额（元）', type: 'number', required: true, default: 0 },
+      { key: 'category', label: '分类', type: 'select', options: ['餐饮', '交通', '学习', '购物', '娱乐', '生活', '其他'], default: '餐饮' },
+      { key: 'date', label: '日期', type: 'date', default: todayStr() },
+      { key: 'note', label: '备注', type: 'text', placeholder: '花在哪儿了？' }
+    ],
+    title: it => (it.type || '支出') + ' ' + money(it.amount),
+    badges: it => [
+      it.type === '收入' ? tag('收入') : tag('支出', 'red'),
+      tag(it.category || '未分类', 'gray'),
+      tag(it.date || '—', 'gray')
+    ],
+    text: it => it.note || '',
+    stats: items => {
+      const income = items.filter(i => i.type === '收入').reduce((s, i) => s + (Number(i.amount) || 0), 0);
+      const expense = items.filter(i => i.type !== '收入').reduce((s, i) => s + (Number(i.amount) || 0), 0);
+      return [
+        { label: '收入', value: money(income) },
+        { label: '支出', value: money(expense) },
+        { label: '结余', value: money(income - expense) }
+      ];
+    }
+  },
+
+  weight: {
+    name: '体重', icon: '⚖️',
+    desc: '记录体重变化，自动绘制趋势曲线',
+    sort: (a, b) => String(b.date || '').localeCompare(String(a.date || '')),
+    charts: (items) => weightCharts(items),
+    fields: [
+      { key: 'date', label: '日期', type: 'date', required: true, default: todayStr() },
+      { key: 'kg', label: '体重（kg）', type: 'number', required: true, default: 60, step: 0.1, placeholder: '例如：58.5' },
+      { key: 'note', label: '备注', type: 'text', placeholder: '例如：早起空腹' }
+    ],
+    title: it => (it.date || '未填日期') + ' · ' + (Number(it.kg) || 0) + ' kg',
+    badges: it => {
+      const prev = prevWeight(it.date);
+      if (!prev) return [tag('首次记录', 'gray')];
+      const diff = (Number(it.kg) || 0) - prev;
+      const cls = Math.abs(diff) < 0.05 ? 'gray' : diff > 0 ? 'red' : 'blue';
+      const txt = Math.abs(diff) < 0.05 ? '持平' : (diff > 0 ? '↑ +' : '↓ ') + diff.toFixed(1) + ' kg';
+      return [tag(txt, cls)];
+    },
+    text: it => it.note || '',
+    stats: items => {
+      const sorted = items.slice().filter(i => i.kg !== '' && !isNaN(Number(i.kg)))
+        .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+      if (!sorted.length) return [{ label: '记录数', value: 0 }];
+      const last = Number(sorted[sorted.length - 1].kg);
+      const first = Number(sorted[0].kg);
+      const diff = last - first;
+      const min = Math.min.apply(null, sorted.map(i => Number(i.kg)));
+      const max = Math.max.apply(null, sorted.map(i => Number(i.kg)));
+      return [
+        { label: '最新体重', value: last + ' kg' },
+        { label: '累计变化', value: (diff > 0 ? '+' : '') + diff.toFixed(1) + ' kg' },
+        { label: '记录数', value: sorted.length },
+        { label: '区间', value: min + ' ~ ' + max + ' kg' }
+      ];
+    }
+  },
+
+  summary: {
+    name: '总结', icon: '📄',
+    desc: '学期 / 月度等阶段性总结文本',
+    fields: [
+      { key: 'title', label: '标题', type: 'text', required: true, placeholder: '例如：2026 春季学期总结' },
+      { key: 'period', label: '周期', type: 'select', options: ['月度', '学期', '年度', '其他'], default: '月度' },
+      { key: 'date', label: '日期', type: 'date', default: todayStr() },
+      { key: 'content', label: '总结内容', type: 'textarea', required: true, rows: 8, placeholder: '收获、不足、下一步计划…' }
+    ],
+    title: it => it.title || '未命名总结',
+    badges: it => [tag(it.period || '其他', 'blue'), tag(it.date || '—', 'gray')],
+    text: it => it.content || '',
+    stats: items => [
+      { label: '总结篇数', value: items.length },
+      { label: '最近一篇', value: items.length ? cut(items[0].title, 10) : '—' }
+    ]
+  }
+};
+
+const MODULE_KEYS = Object.keys(MODULES);
+
+/* 剩余天数的文字表达 */
+function dayText(d) {
+  if (d === 0) return '就是今天';
+  if (d > 0) return '剩 ' + d + ' 天';
+  return '已过 ' + Math.abs(d) + ' 天';
+}
+
+/* ---------------- 3.1 通用小工具：标签 / 考试提醒 / 体重 ---------------- */
+/* 标签解析：支持空格、逗号、分号、顿号分隔 */
+function parseTags(v) {
+  return String(v == null ? '' : v).split(/[,，;；、\s]+/).map(s => s.trim()).filter(Boolean).slice(0, 6);
+}
+/* 考试紧迫度：hot = 3 天内，soon = 14 天内 */
+function examLevel(d) {
+  if (d == null || d < 0) return 'none';
+  return d <= 3 ? 'hot' : d <= 14 ? 'soon' : 'far';
+}
+function remindDays(it) {
+  const n = Number(it.remind);
+  return (isNaN(n) || n <= 0) ? 7 : n;
+}
+function inRemindWindow(it) {
+  const d = daysLeft(it.date);
+  return d != null && d >= 0 && d <= remindDays(it);
+}
+/* 处于提醒窗口内的考试，按剩余天数升序 */
+function examReminders() {
+  return db.exam.map(i => ({ i, d: daysLeft(i.date) }))
+    .filter(x => x.d != null && x.d >= 0 && x.d <= remindDays(x.i))
+    .sort((a, b) => a.d - b.d);
+}
+/* 某日期之前最近一条体重记录的数值 */
+function prevWeight(date) {
+  const list = db.weight
+    .filter(i => i.kg !== '' && !isNaN(Number(i.kg)) && String(i.date || '') < String(date || ''))
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  return list.length ? Number(list[0].kg) : null;
+}
+
+/* 桌面通知授权（只在用户点击开关时调用） */
+async function askNotifyPermission() {
+  if (typeof Notification === 'undefined') { toast('当前环境不支持桌面通知'); return false; }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') { toast('通知权限已被拒绝，请在浏览器设置里开启'); return false; }
+  try {
+    const p = await Notification.requestPermission();
+    if (p !== 'granted') toast('未获得通知权限');
+    return p === 'granted';
+  } catch (e) { return false; }
+}
+
+/* 进入提醒窗口的考试发一次系统通知（同一天同一条只提醒一次） */
+function maybeNotifyExams() {
+  if (!settings.notify) return;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  const list = examReminders();
+  if (!list.length) return;
+  const today = todayStr();
+  let seen = {};
+  try { seen = JSON.parse(localStorage.getItem(NOTIFIED_KEY) || '{}') || {}; } catch (e) { seen = {}; }
+  const fresh = list.filter(x => seen[x.i.id] !== today);
+  if (!fresh.length) return;
+  fresh.forEach(x => { seen[x.i.id] = today; });
+  try { localStorage.setItem(NOTIFIED_KEY, JSON.stringify(seen)); } catch (e) { /* 忽略 */ }
+  try {
+    new Notification('⏰ 考试倒计时提醒', {
+      body: fresh.map(x => x.i.name + ' 还有 ' + x.d + ' 天').join('；'),
+      icon: 'icon.svg',
+      tag: 'mint-exam-reminder'
+    });
+  } catch (e) { /* 部分浏览器不支持构造函数，忽略 */ }
+}
+
+/* ---------------- 3.2 图表绘制（纯 SVG，无第三方库） ---------------- */
+const CHART_COLORS = ['#72C894', '#57b47d', '#9fd9b8', '#3f9c6b', '#c3e8d3', '#8ecfaa', '#6bb98f', '#a8c6b4'];
+const CHART_RED = '#d98b8b';
+
+function fmtNum(n) { return String(Math.round(n * 100) / 100); }
+function svgOpen(w, h) {
+  return '<svg class="chart-svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid meet">';
+}
+function chartCard(title, sub, body) {
+  return '<section class="chart-card"><div class="chart-head"><h3>' + title + '</h3>' +
+    (sub ? '<span class="sub">' + sub + '</span>' : '') + '</div>' + body + '</section>';
+}
+function chartEmpty(msg) { return '<div class="chart-empty">' + esc(msg || '暂无数据') + '</div>'; }
+
+/* 环形（甜甜圈）图 */
+function donutSlicePath(cx, cy, rOut, rIn, a1, a2) {
+  const big = (a2 - a1) > Math.PI ? 1 : 0;
+  const p = (r, a) => fmtNum(cx + r * Math.cos(a)) + ' ' + fmtNum(cy + r * Math.sin(a));
+  return 'M' + p(rOut, a1) +
+    ' A' + rOut + ' ' + rOut + ' 0 ' + big + ' 1 ' + p(rOut, a2) +
+    ' L' + p(rIn, a2) +
+    ' A' + rIn + ' ' + rIn + ' 0 ' + big + ' 0 ' + p(rIn, a1) + ' Z';
+}
+function donutChart(data, opts) {
+  opts = opts || {};
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (!total) return chartEmpty(opts.empty || '暂无数据');
+  const W = opts.w || 340, H = opts.h || 190;
+  const cx = 92, cy = H / 2, rOut = 70, rIn = 43;
+  let a = -Math.PI / 2;
+  const segs = [];
+  data.forEach((d, i) => {
+    const span = (d.value / total) * Math.PI * 2;
+    const color = d.color || CHART_COLORS[i % CHART_COLORS.length];
+    if (span >= Math.PI * 2 - 1e-6) {   // 单一分类占满一圈
+      segs.push('<path d="' + donutSlicePath(cx, cy, rOut, rIn, -Math.PI / 2, Math.PI / 2) + '" fill="' + color + '"/>');
+      segs.push('<path d="' + donutSlicePath(cx, cy, rOut, rIn, Math.PI / 2, Math.PI * 1.5) + '" fill="' + color + '"/>');
+    } else {
+      segs.push('<path d="' + donutSlicePath(cx, cy, rOut, rIn, a, a + span) + '" fill="' + color + '" stroke="#fff" stroke-width="1.2"/>');
+    }
+    a += span;
+  });
+  const center = opts.center
+    ? '<text x="' + cx + '" y="' + (cy - 1) + '" text-anchor="middle" font-size="14" font-weight="600" fill="#3f9c6b">' + esc(opts.center) + '</text>' +
+      '<text x="' + cx + '" y="' + (cy + 17) + '" text-anchor="middle" font-size="11" fill="#8aa196">' + esc(opts.centerSub || '') + '</text>'
+    : '';
+  const legend = '<div class="chart-legend">' + data.slice(0, 8).map((d, i) =>
+    '<span><i style="background:' + (d.color || CHART_COLORS[i % CHART_COLORS.length]) + '"></i>' +
+    esc(d.label) + ' ' + money(d.value) + '</span>').join('') + '</div>';
+  return svgOpen(W, H) + segs.join('') + center + '</svg>' + legend;
+}
+
+/* 分组柱状图 */
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / mag;
+  const step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+  return step * mag;
+}
+function barChart(labels, series, opts) {
+  opts = opts || {};
+  const W = 340, H = 200, padL = 46, padR = 10, padT = 14, padB = 28;
+  const iw = W - padL - padR, ih = H - padT - padB;
+  let max = 0;
+  series.forEach(s => s.values.forEach(v => { if (v > max) max = v; }));
+  if (max <= 0) return chartEmpty(opts.empty || '暂无数据');
+  max = niceMax(max);
+  const gw = iw / labels.length;
+  const bw = Math.min(16, (gw * 0.6) / series.length);
+  const yOf = v => padT + ih - (v / max) * ih;
+
+  let g = '';
+  for (let i = 0; i <= 4; i++) {           // 网格 + Y 轴刻度
+    const v = (max / 4) * i, y = yOf(v);
+    g += '<line x1="' + padL + '" y1="' + fmtNum(y) + '" x2="' + (W - padR) + '" y2="' + fmtNum(y) + '" stroke="#eef6f1" stroke-width="1"/>' +
+      '<text x="' + (padL - 6) + '" y="' + fmtNum(y + 3.5) + '" text-anchor="end" font-size="9.5" fill="#a9bdb2">' + fmtNum(v) + '</text>';
+  }
+  labels.forEach((lb, gi) => {
+    const cx = padL + gw * gi + gw / 2;
+    series.forEach((s, si) => {
+      const v = s.values[gi] || 0;
+      const x = cx - (bw * series.length) / 2 + si * bw + 1;
+      const h = Math.max(0, (v / max) * ih);
+      if (v > 0) g += '<rect x="' + fmtNum(x) + '" y="' + fmtNum(yOf(v)) + '" width="' + fmtNum(bw - 2) + '" height="' + fmtNum(h) + '" rx="3" fill="' + s.color + '"><title>' + esc(lb + ' ' + s.name + ' ' + money(v)) + '</title></rect>';
+      if (v > 0 && series.length === 1) {
+        g += '<text x="' + fmtNum(x + (bw - 2) / 2) + '" y="' + fmtNum(yOf(v) - 4) + '" text-anchor="middle" font-size="9" fill="#7f9589">' + fmtNum(v) + '</text>';
+      }
+    });
+    g += '<text x="' + fmtNum(cx) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="10.5" fill="#8aa196">' + esc(lb) + '</text>';
+  });
+
+  const legend = '<div class="chart-legend">' + series.map(s =>
+    '<span><i style="background:' + s.color + '"></i>' + esc(s.name) + '</span>').join('') + '</div>';
+  return svgOpen(W, H) + g + '</svg>' + legend;
+}
+
+/* 折线图（体重变化） */
+function lineChart(points, opts) {
+  opts = opts || {};
+  if (!points.length) return chartEmpty(opts.empty || '暂无数据');
+  const W = 340, H = 200, padL = 40, padR = 16, padT = 18, padB = 28;
+  const iw = W - padL - padR, ih = H - padT - padB;
+
+  const vs = points.map(p => p.v);
+  let min = Math.min.apply(null, vs), max = Math.max.apply(null, vs);
+  if (max - min < 0.6) { const mid = (max + min) / 2; min = mid - 0.5; max = mid + 0.5; }
+  const pad = (max - min) * 0.15;
+  min -= pad; max += pad;
+
+  const ts = points.map(p => Date.parse(p.d + 'T00:00:00'));
+  const t0 = ts[0], t1 = ts[ts.length - 1];
+  const span = (t1 - t0) || 1;
+  const xOf = i => points.length === 1 ? padL + iw / 2 : padL + ((ts[i] - t0) / span) * iw;
+  const yOf = v => padT + ih - ((v - min) / (max - min)) * ih;
+
+  let g = '';
+  for (let i = 0; i <= 3; i++) {              // 网格 + 体重刻度
+    const v = min + ((max - min) / 3) * i, y = yOf(v);
+    g += '<line x1="' + padL + '" y1="' + fmtNum(y) + '" x2="' + (W - padR) + '" y2="' + fmtNum(y) + '" stroke="#eef6f1"/>' +
+      '<text x="' + (padL - 6) + '" y="' + fmtNum(y + 3.5) + '" text-anchor="end" font-size="9.5" fill="#a9bdb2">' + v.toFixed(1) + '</text>';
+  }
+
+  const line = points.map((p, i) => (i ? 'L' : 'M') + fmtNum(xOf(i)) + ' ' + fmtNum(yOf(p.v))).join(' ');
+  if (points.length > 1) {
+    g += '<path d="' + line + ' L' + fmtNum(xOf(points.length - 1)) + ' ' + (padT + ih) + ' L' + fmtNum(xOf(0)) + ' ' + (padT + ih) + ' Z" fill="#72C894" opacity="0.12"/>';
+  }
+  g += '<path d="' + line + '" fill="none" stroke="#72C894" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
+
+  points.forEach((p, i) => {
+    const isLast = i === points.length - 1;
+    g += '<circle cx="' + fmtNum(xOf(i)) + '" cy="' + fmtNum(yOf(p.v)) + '" r="' + (isLast ? 4.6 : 3.2) + '" fill="#fff" stroke="#72C894" stroke-width="2"><title>' + esc(p.d + ' ' + p.v + ' kg') + '</title></circle>';
+    if (isLast) {
+      g += '<text x="' + fmtNum(xOf(i)) + '" y="' + fmtNum(yOf(p.v) - 10) + '" text-anchor="end" font-size="11" font-weight="600" fill="#3f9c6b">' + p.v + 'kg</text>';
+    }
+  });
+
+  const labelIdx = points.length > 2 ? [0, Math.floor((points.length - 1) / 2), points.length - 1] : [0, points.length - 1];
+  const shown = {};
+  labelIdx.forEach(i => {
+    if (i < 0 || shown[i]) return;
+    shown[i] = 1;
+    const anchor = i === 0 ? 'start' : (i === points.length - 1 ? 'end' : 'middle');
+    g += '<text x="' + fmtNum(xOf(i)) + '" y="' + (H - 9) + '" text-anchor="' + anchor + '" font-size="10" fill="#8aa196">' +
+      esc(String(points[i].d).slice(5)) + '</text>';
+  });
+
+  return svgOpen(W, H) + g + '</svg>' +
+    '<div class="chart-legend"><span><i style="background:#72C894"></i>体重（kg）</span>' +
+    '<span>共 ' + points.length + ' 次记录</span></div>';
+}
+
+/* 记账：分类占比环形图 + 近 6 月收支柱状图 */
+function monthKeys(n) {
+  const now = new Date(), keys = [], labels = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    keys.push(d.getFullYear() + '-' + (d.getMonth() + 1));
+    labels.push((d.getMonth() + 1) + '月');
+  }
+  return { keys, labels };
+}
+function accountCharts(items) {
+  const type = state.pieType || '支出';
+  const byCat = {};
+  items.filter(i => (i.type || '支出') === type).forEach(i => {
+    const c = i.category || '未分类';
+    byCat[c] = (byCat[c] || 0) + (Number(i.amount) || 0);
+  });
+  let data = Object.keys(byCat)
+    .map(k => ({ label: k, value: Math.round(byCat[k] * 100) / 100 }))
+    .sort((a, b) => b.value - a.value);
+  if (data.length > 7) {
+    const rest = data.slice(6).reduce((s, d) => s + d.value, 0);
+    data = data.slice(0, 6).concat([{ label: '其他', value: Math.round(rest * 100) / 100 }]);
+  }
+  if (type === '支出' && data.length) data[0].color = CHART_RED;
+  const total = data.reduce((s, d) => s + d.value, 0);
+
+  const pie = chartCard(type + '分类占比',
+    '<select class="chart-select" id="pieType">' +
+      '<option' + (type === '支出' ? ' selected' : '') + '>支出</option>' +
+      '<option' + (type === '收入' ? ' selected' : '') + '>收入</option>' +
+    '</select>',
+    donutChart(data, {
+      center: money(total).replace('.00', ''),
+      centerSub: '合计',
+      empty: '还没有' + type + '记录'
+    }));
+
+  const { keys, labels } = monthKeys(6);
+  const inc = keys.map(() => 0), exp = keys.map(() => 0);
+  items.forEach(it => {
+    if (!it.date) return;
+    const idx = keys.indexOf(monthKey(it.date + 'T00:00:00'));
+    if (idx < 0) return;
+    const v = Number(it.amount) || 0;
+    if (it.type === '收入') inc[idx] += v; else exp[idx] += v;
+  });
+  const bar = chartCard('近 6 个月收支对比',
+    '<span class="sub">单位：元</span>',
+    barChart(labels, [
+      { name: '收入', color: '#72C894', values: inc },
+      { name: '支出', color: CHART_RED, values: exp }
+    ], { empty: '近 6 个月还没有记录' }));
+
+  return pie + bar;
+}
+
+/* 体重：变化曲线 */
+function weightCharts(items) {
+  const pts = items
+    .filter(i => i.date && i.kg !== '' && i.kg !== null && i.kg !== undefined && !isNaN(Number(i.kg)))
+    .map(i => ({ d: i.date, v: Number(i.kg) }))
+    .sort((a, b) => String(a.d).localeCompare(String(b.d)));
+  const diff = pts.length > 1 ? pts[pts.length - 1].v - pts[0].v : 0;
+  const sub = pts.length > 1
+    ? '<span class="sub">较首次 ' + (diff > 0 ? '+' : '') + diff.toFixed(1) + ' kg</span>'
+    : '<span class="sub">单位：kg</span>';
+  return chartCard('⚖️ 体重变化曲线', sub,
+    pts.length ? lineChart(pts) : chartEmpty('还没有体重记录，点右上角「新增体重」开始记录'));
+}
+
+/* ---------------- 3.3 Excel（.xlsx）导出：内置极简 ZIP + XML 写入 ---------------- */
+let CRC_TABLE = null;
+function crc32(bytes) {
+  if (!CRC_TABLE) {
+    CRC_TABLE = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      CRC_TABLE[n] = c >>> 0;
+    }
+  }
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+/* 以「不压缩」方式打包成 zip（xlsx 本质就是 zip） */
+function zipStore(entries) {
+  const enc = new TextEncoder();
+  const parts = [], central = [];
+  let offset = 0;
+  entries.forEach(e => {
+    const nameBytes = enc.encode(e.name);
+    const data = e.data;
+    const crc = crc32(data);
+
+    const lh = new Uint8Array(30 + nameBytes.length);
+    const lv = new DataView(lh.buffer);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);
+    lv.setUint16(6, 0x0800, true);        // 文件名用 UTF-8
+    lv.setUint16(8, 0, true);             // 存储方式：不压缩
+    lv.setUint16(10, 0, true);
+    lv.setUint16(12, 0x2100, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, data.length, true);
+    lv.setUint32(22, data.length, true);
+    lv.setUint16(26, nameBytes.length, true);
+    lh.set(nameBytes, 30);
+    parts.push(lh, data);
+
+    const ch = new Uint8Array(46 + nameBytes.length);
+    const cv = new DataView(ch.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint16(12, 0, true);
+    cv.setUint16(14, 0x2100, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, data.length, true);
+    cv.setUint32(24, data.length, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint32(42, offset, true);
+    ch.set(nameBytes, 46);
+    central.push(ch);
+
+    offset += lh.length + data.length;
+  });
+  const cdSize = central.reduce((s, c) => s + c.length, 0);
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, entries.length, true);
+  ev.setUint16(10, entries.length, true);
+  ev.setUint32(12, cdSize, true);
+  ev.setUint32(16, offset, true);
+  return new Blob(parts.concat(central, [end]),
+    { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+function xmlEsc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
+}
+function excelCol(i) {
+  let s = '', n = i + 1;
+  while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+function sheetXml(rows) {
+  const body = rows.map((row, r) =>
+    '<row r="' + (r + 1) + '">' + row.map((v, c) => {
+      const ref = excelCol(c) + (r + 1);
+      if (v === null || v === undefined || v === '') return '<c r="' + ref + '"/>';
+      if (typeof v === 'number' && isFinite(v)) return '<c r="' + ref + '"><v>' + v + '</v></c>';
+      return '<c r="' + ref + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(v) + '</t></is></c>';
+    }).join('') + '</row>').join('');
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<sheetData>' + body + '</sheetData></worksheet>';
+}
+/* sheets: [{ name, rows: [[...]] }] */
+function buildXlsx(sheets) {
+  const enc = new TextEncoder();
+  const files = [];
+  const ct = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">',
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>',
+    '<Default Extension="xml" ContentType="application/xml"/>',
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'];
+  sheets.forEach((s, i) => ct.push('<Override PartName="/xl/worksheets/sheet' + (i + 1) +
+    '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'));
+  ct.push('</Types>');
+  files.push({ name: '[Content_Types].xml', data: enc.encode(ct.join('')) });
+  files.push({
+    name: '_rels/.rels',
+    data: enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      '</Relationships>')
+  });
+  files.push({
+    name: 'xl/workbook.xml',
+    data: enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+      sheets.map((s, i) => '<sheet name="' + xmlEsc(s.name) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') +
+      '</sheets></workbook>')
+  });
+  files.push({
+    name: 'xl/_rels/workbook.xml.rels',
+    data: enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      sheets.map((s, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') +
+      '</Relationships>')
+  });
+  sheets.forEach((s, i) => files.push({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', data: enc.encode(sheetXml(s.rows)) }));
+  return zipStore(files);
+}
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+/* 记账导出：明细 / 月度汇总 / 分类汇总 */
+function exportAccountXlsx() {
+  const items = db.account.slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+
+  const detail = [['日期', '类型', '分类', '金额(元)', '备注']];
+  items.forEach(i => detail.push([i.date || '', i.type || '支出', i.category || '未分类', Number(i.amount) || 0, i.note || '']));
+
+  const { keys, labels } = monthKeys(12);
+  const monthly = [['月份', '收入(元)', '支出(元)', '结余(元)']];
+  keys.forEach((k, i) => {
+    const list = items.filter(it => it.date && monthKey(it.date + 'T00:00:00') === k);
+    const inc = list.filter(x => x.type === '收入').reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    const exp = list.filter(x => x.type !== '收入').reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    monthly.push([labels[i] + '（' + k + '）', Math.round(inc * 100) / 100, Math.round(exp * 100) / 100, Math.round((inc - exp) * 100) / 100]);
+  });
+
+  const cat = [['类型', '分类', '金额(元)']];
+  ['支出', '收入'].forEach(t => {
+    const byCat = {};
+    items.filter(i => (i.type || '支出') === t).forEach(i => {
+      const c = i.category || '未分类';
+      byCat[c] = (byCat[c] || 0) + (Number(i.amount) || 0);
+    });
+    Object.keys(byCat).sort((a, b) => byCat[b] - byCat[a])
+      .forEach(c => cat.push([t, c, Math.round(byCat[c] * 100) / 100]));
+  });
+
+  const total = items.reduce((s, i) => s + (i.type === '收入' ? (Number(i.amount) || 0) : -(Number(i.amount) || 0)), 0);
+  cat.push(['合计', '结余', Math.round(total * 100) / 100]);
+
+  try {
+    const blob = buildXlsx([
+      { name: '收支明细', rows: detail },
+      { name: '月度汇总', rows: monthly },
+      { name: '分类汇总', rows: cat }
+    ]);
+    downloadBlob(blob, '记账导出-' + todayStr() + '.xlsx');
+    toast('已导出 Excel（' + items.length + ' 条记录）');
+  } catch (e) {
+    toast('导出失败：' + e.message);
+  }
+}
+
+/* ---------------- 4. 全局状态 ---------------- */
+const state = {
+  page: 'dashboard',
+  kw: '',
+  pieType: '支出',                                    // 记账饼图当前查看的类型
+  editing: { module: null, id: null }
+};
+
+/* ---------------- 5. 侧边栏渲染 ---------------- */
+function renderNav() {
+  const dashCount = db.todo.filter(i => !i.done).length;
+  let html = '<button class="nav-item ' + (state.page === 'dashboard' ? 'active' : '') + '" data-page="dashboard">' +
+    '<span class="ico">🏠</span><span class="txt">首页仪表盘</span>' +
+    (dashCount ? '<span class="count">' + dashCount + '</span>' : '') + '</button>';
+
+  orderedKeys().forEach(key => {
+    const m = MODULES[key];
+    const n = db[key].length;
+    html += '<button class="nav-item ' + (state.page === key ? 'active' : '') + '" data-page="' + key + '">' +
+      '<span class="ico">' + m.icon + '</span><span class="txt">' + m.name + '</span>' +
+      (n ? '<span class="count">' + n + '</span>' : '') + '</button>';
+  });
+
+  html += '<button class="nav-item ' + (state.page === 'settings' ? 'active' : '') + '" data-page="settings">' +
+    '<span class="ico">⚙️</span><span class="txt">设置 · 同步</span>' +
+    (configuredCloud() ? '<span class="count">☁</span>' : '') + '</button>';
+
+  $('#nav').innerHTML = html;
+}
+
+/* ---------------- 6. 首页仪表盘 ---------------- */
+function renderDashboard() {
+  $('#pageTitle').textContent = '首页仪表盘';
+  $('#pageDesc').textContent = '今天是 ' + todayStr() + ' · 共 ' + MODULE_KEYS.length + ' 个模块';
+  $('#topbarActions').innerHTML = '';
+
+  // 关键指标
+  const undone = db.todo.filter(i => !i.done).length;
+  const nextEvent = db.countdown.map(i => ({ i, d: daysLeft(i.date) }))
+    .filter(x => x.d != null && x.d >= 0).sort((a, b) => a.d - b.d)[0];
+  const nextExam = db.exam.map(i => ({ i, d: daysLeft(i.date) }))
+    .filter(x => x.d != null && x.d >= 0).sort((a, b) => a.d - b.d)[0];
+  const thisMonth = monthKey(todayStr() + 'T00:00:00');
+  const monthAcc = db.account.filter(i => i.date && monthKey(i.date + 'T00:00:00') === thisMonth);
+  const mIncome = monthAcc.filter(i => i.type === '收入').reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const mExpense = monthAcc.filter(i => i.type !== '收入').reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const weightList = db.weight.filter(i => i.kg !== '' && !isNaN(Number(i.kg)))
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  const lastWeight = weightList.length ? Number(weightList[weightList.length - 1].kg) : null;
+
+  const stats = [
+    { label: '待办未完成', value: undone + ' 项' },
+    { label: '最近倒数日', value: nextEvent ? nextEvent.i.title + '（' + nextEvent.d + ' 天）' : '暂无' },
+    { label: '最近考试', value: nextExam ? nextExam.i.name + '（' + nextExam.d + ' 天）' : '暂无' },
+    { label: '本月结余', value: money(mIncome - mExpense) },
+    { label: '最新体重', value: lastWeight == null ? '暂无' : lastWeight + ' kg' }
+  ];
+
+  let html = '';
+
+  // 考试倒计时提醒横幅
+  const reminders = examReminders();
+  if (reminders.length) {
+    html += '<div class="banner"><span class="b-ico">⏰</span><div class="b-body">' +
+      '<b>考试倒计时提醒</b>' +
+      reminders.map(x => '<span class="b-item">· ' + esc(x.i.name) + ' 还有 <b>' + x.d + '</b> 天' +
+        (x.i.place ? '（' + esc(x.i.place) + '）' : '') + '</span>').join('') +
+      '</div></div>';
+  } else if (!db.exam.length) {
+    html += '<div class="banner ok"><span class="b-ico">🌿</span><div class="b-body">' +
+      '所有数据都保存在这台设备上，配置 GitHub Gist 后可在多设备之间同步。</div></div>';
+  }
+
+  html += '<div class="stats">' + stats.map(s =>
+    '<div class="stat"><div class="label">' + esc(s.label) + '</div><div class="value">' + esc(s.value) + '</div></div>'
+  ).join('') + '</div>';
+
+  // 各模块预览（顺序 = 用户拖拽后的自定义顺序，与侧边导航保持一致）
+  html += '<div class="grid">';
+  orderedKeys().forEach(key => {
+    const m = MODULES[key];
+    const items = sortItems(key).slice(0, 3);
+    const body = items.length
+      ? '<ul class="preview">' + items.map(it =>
+          '<li><span class="dot"></span><span class="t">' + esc(m.title(it)) + '</span>' +
+          '<span class="d">' + esc(fmtTime(it.createdAt)) + '</span></li>'
+        ).join('') + '</ul>'
+      : '<p class="none">暂无内容，点击右上角「查看」开始记录</p>';
+
+    html += '<section class="panel" data-module="' + key + '">' +
+      '<div class="panel-head">' +
+        '<div class="ph-title">' +
+          '<button class="drag-handle" data-drag="' + key + '" title="按住拖动可调整顺序" aria-label="拖拽调整「' + m.name + '」的位置">' +
+            '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">' +
+              '<circle cx="5" cy="4" r="1.35"/><circle cx="11" cy="4" r="1.35"/>' +
+              '<circle cx="5" cy="8" r="1.35"/><circle cx="11" cy="8" r="1.35"/>' +
+              '<circle cx="5" cy="12" r="1.35"/><circle cx="11" cy="12" r="1.35"/>' +
+            '</svg>' +
+          '</button>' +
+          '<h3>' + m.icon + ' ' + m.name + ' <span class="tag gray">' + db[key].length + '</span></h3>' +
+        '</div>' +
+        '<button class="more" data-goto="' + key + '">查看 →</button>' +
+      '</div>' +
+      body + '</section>';
+  });
+  html += '</div>';
+
+  $('#view').innerHTML = html;
+}
+
+/* ---------------- 7. 模块页面渲染 ---------------- */
+function sortItems(key) {
+  const m = MODULES[key];
+  const items = db[key].slice();
+  if (m.sort) items.sort(m.sort);
+  else items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return items;
+}
+
+function renderModule(key) {
+  const m = MODULES[key];
+  $('#pageTitle').textContent = m.icon + ' ' + m.name;
+  $('#pageDesc').textContent = m.desc;
+  $('#topbarActions').innerHTML = (m.actions ? m.actions() : '') +
+    '<button class="btn primary" id="addBtn">+ 新增' + m.name + '</button>';
+  $('#addBtn').onclick = () => openModal(key);
+
+  const all = sortItems(key);
+  const kw = state.kw.trim().toLowerCase();
+  const items = kw
+    ? all.filter(it => JSON.stringify(it).toLowerCase().includes(kw))
+    : all;
+
+  let html = '';
+
+  // 考试页顶部的倒计时提醒
+  if (key === 'exam') {
+    const reminders = examReminders();
+    if (reminders.length) {
+      html += '<div class="banner"><span class="b-ico">⏰</span><div class="b-body"><b>进入提醒窗口</b>' +
+        reminders.map(x => '<span class="b-item">· ' + esc(x.i.name) + ' 还有 <b>' + x.d + '</b> 天，' +
+          '提醒阈值 ' + remindDays(x.i) + ' 天</span>').join('') +
+        '</div></div>';
+    }
+  }
+
+  html += '<div class="stats">' + m.stats(all).map(s =>
+    '<div class="stat"><div class="label">' + esc(s.label) + '</div><div class="value">' + esc(s.value) + '</div></div>'
+  ).join('') + '</div>';
+
+  // 图表区（记账 / 体重）
+  if (m.charts) html += '<div class="charts">' + m.charts(items) + '</div>';
+
+  html += '<div class="toolbar">' +
+    '<span class="tip">共 ' + all.length + ' 条' + (kw ? ' · 筛选出 ' + items.length + ' 条' : '') + '</span>' +
+    '<input class="search" id="searchInput" placeholder="搜索' + m.name + '…" value="' + esc(state.kw) + '">' +
+    '</div>';
+
+  html += items.length
+    ? '<div class="list">' + items.map(it => itemCard(key, it)).join('') + '</div>'
+    : '<div class="empty">' + (kw ? '没有匹配的内容' : '还没有记录，点击右上角「新增' + m.name + '」开始吧 🌿') + '</div>';
+
+  $('#view').innerHTML = html;
+
+  const input = $('#searchInput');
+  input.addEventListener('input', () => {
+    state.kw = input.value;
+    renderModule(key);
+    const next = $('#searchInput');
+    next.focus();
+    next.setSelectionRange(next.value.length, next.value.length);
+  });
+}
+
+function itemCard(key, it) {
+  const m = MODULES[key];
+  const badges = (m.badges ? m.badges(it) : []).filter(Boolean);
+  const text = m.text ? m.text(it) : '';
+  const checked = m.checkable && it[m.checkKey];
+
+  const check = m.checkable
+    ? '<button class="check ' + (checked ? 'on' : '') + '" data-act="toggle" data-key="' + key + '" data-id="' + it.id + '" title="切换状态">' +
+      (checked ? '✓' : '') + '</button>'
+    : '';
+
+  let titleHTML = esc(m.title(it));
+  if (m.link && m.link(it)) {
+    titleHTML = '<a href="' + esc(m.link(it)) + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">' + titleHTML + '</a>';
+  }
+  const pinned = !!it.pinned;
+  if (pinned) titleHTML = '<span class="pin" title="已置顶">📌</span>' + titleHTML;
+
+  return '<article class="card' + (checked ? ' done' : '') + (pinned ? ' pinned' : '') + '">' +
+    '<div class="card-head">' + check +
+      '<div class="card-title">' + titleHTML + '</div>' +
+      '<div class="card-actions">' +
+        '<button class="mini-btn" data-act="edit" data-key="' + key + '" data-id="' + it.id + '">编辑</button>' +
+        '<button class="mini-btn danger" data-act="del" data-key="' + key + '" data-id="' + it.id + '">删除</button>' +
+      '</div>' +
+    '</div>' +
+    (badges.length ? '<div class="badges">' + badges.join('') + '</div>' : '') +
+    (text ? '<p class="card-text">' + esc(text) + '</p>' : '') +
+    '<div class="card-foot">' + esc(fmtTime(it.createdAt)) + '</div>' +
+  '</article>';
+}
+
+/* ---------------- 8. 新增 / 编辑 弹窗 ---------------- */
+function fieldHTML(f, item) {
+  const raw = item && item[f.key] !== undefined ? item[f.key] : (f.default !== undefined ? f.default : '');
+  let control;
+
+  if (f.type === 'checkbox') {
+    return '<div class="field"><label class="cb">' +
+      '<input type="checkbox" data-key="' + f.key + '"' + (raw ? ' checked' : '') + '>' +
+      '<span>' + f.label + '</span></label></div>';
+  }
+  if (f.type === 'textarea') {
+    control = '<textarea data-key="' + f.key + '" rows="' + (f.rows || 5) + '" placeholder="' +
+      esc(f.placeholder || '') + '">' + esc(raw) + '</textarea>';
+  } else if (f.type === 'select') {
+    control = '<select data-key="' + f.key + '">' + f.options.map(o =>
+      '<option' + (String(o) === String(raw) ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select>';
+  } else if (f.type === 'number') {
+    control = '<input type="number" step="' + (f.step || 0.01) + '"' + (f.min !== undefined ? ' min="' + f.min + '"' : '') +
+      ' data-key="' + f.key + '" value="' + esc(raw) + '" placeholder="' + esc(f.placeholder || '') + '">';
+  } else if (f.type === 'date') {
+    control = '<input type="date" data-key="' + f.key + '" value="' + esc(raw) + '">';
+  } else {
+    control = '<input type="text" data-key="' + f.key + '" value="' + esc(raw) +
+      '" placeholder="' + esc(f.placeholder || '') + '">';
+  }
+
+  return '<div class="field"><label>' + f.label + (f.required ? ' <i>*</i>' : '') + '</label>' + control + '</div>';
+}
+
+function openModal(key, id) {
+  const m = MODULES[key];
+  const item = id ? db[key].find(x => x.id === id) : null;
+  state.editing = { module: key, id: id || null };
+
+  $('#modalTitle').textContent = (id ? '编辑' : '新增') + m.name;
+  $('#modalBody').innerHTML = m.fields.map(f => fieldHTML(f, item)).join('');
+  $('#mask').classList.add('show');
+
+  // 复盘模块：切换类型自动套用固定模板
+  if (key === 'review') {
+    const sel = $('#modalBody [data-key="type"]');
+    const ta = $('#modalBody [data-key="content"]');
+    const applyTpl = (force) => {
+      const cur = ta.value.trim();
+      const isTemplate = Object.values(REVIEW_TEMPLATES).some(t => t.trim() === cur);
+      if (force || cur === '' || isTemplate) ta.value = REVIEW_TEMPLATES[sel.value] || '';
+    };
+    sel.addEventListener('change', () => applyTpl(false));
+    if (!id) applyTpl(true);
+  }
+
+  const first = $('#modalBody [data-key]');
+  if (first && first.tagName !== 'SELECT') setTimeout(() => first.focus(), 30);
+}
+
+function closeModal() {
+  $('#mask').classList.remove('show');
+  $('#modalBody').innerHTML = '';
+}
+
+function saveModal() {
+  const key = state.editing.module;
+  if (!key) return;
+  const m = MODULES[key];
+  const data = {};
+
+  for (const f of m.fields) {
+    const el = $('#modalBody [data-key="' + f.key + '"]');
+    if (!el) continue;
+    let v;
+    if (f.type === 'checkbox') v = el.checked;
+    else if (f.type === 'number') v = el.value.trim() === '' ? 0 : Number(el.value);
+    else v = el.value.trim();
+
+    if (f.required && (v === '' || v === null || v === undefined)) {
+      toast('请填写：' + f.label);
+      el.focus();
+      return;
+    }
+    data[f.key] = v;
+  }
+
+  if (state.editing.id) {
+    const idx = db[key].findIndex(x => x.id === state.editing.id);
+    if (idx > -1) db[key][idx] = Object.assign({}, db[key][idx], data, { updatedAt: nowISO() });
+    toast(m.name + '已更新');
+  } else {
+    db[key].push(Object.assign({ id: uid(), createdAt: nowISO() }, data));
+    toast('已新增' + m.name);
+  }
+
+  saveDB();
+  closeModal();
+  refresh();
+}
+
+/* ---------------- 9. 增删改查 ---------------- */
+function toggleItem(key, id) {
+  const m = MODULES[key];
+  const it = db[key].find(x => x.id === id);
+  if (!it) return;
+  it[m.checkKey] = !it[m.checkKey];
+  it.updatedAt = nowISO();
+  saveDB();
+  refresh();
+}
+
+function deleteItem(key, id) {
+  const it = db[key].find(x => x.id === id);
+  if (!it) return;
+  const name = MODULES[key].name;
+  if (!confirm('确定删除这条' + name + '吗？此操作不可撤销。')) return;
+  db[key] = db[key].filter(x => x.id !== id);
+  markDeleted(id);          // 记录删除标记，同步时不会从云端"复活"
+  saveDB();
+  toast('已删除');
+  refresh();
+}
+
+function refresh() {
+  renderNav();
+  if (state.page === 'dashboard') renderDashboard();
+  else if (state.page === 'settings') renderSettings();
+  else renderModule(state.page);
+  renderSyncState();
+}
+
+function go(page) {
+  state.page = page;
+  state.kw = '';
+  refresh();
+  $('.main').scrollTop = 0;
+}
+
+/* ---------------- 10. GitHub Gist 云端同步 ---------------- */
+function configuredCloud() { return !!(settings.token && settings.gistId); }
+
+/* 请求头 */
+function ghHeaders() {
+  const h = { 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  if (settings.token) h['Authorization'] = 'Bearer ' + settings.token.trim();
+  return h;
+}
+async function ghFail(res) {
+  let msg = 'HTTP ' + res.status;
+  try { const j = await res.json(); if (j && j.message) msg = j.message; } catch (e) { /* ignore */ }
+  if (res.status === 401) msg = 'Token 无效或已过期（401）';
+  else if (res.status === 404) msg = 'Gist 不存在，或 Token 没有访问权限（404）';
+  else if (res.status === 403) msg = '请求被拒绝，可能触发了频率限制（403）';
+  return new Error(msg);
+}
+
+/* 把本地数据整理成同步结构（含卡片顺序） */
+function collectLocal() {
+  const modules = {};
+  MODULE_KEYS.forEach(k => { modules[k] = db[k] || []; });
+  return { modules, tombstones: db._deleted || {}, order: readOrderMeta() };
+}
+/* 兼容：既支持标准同步结构，也支持直接导入导出的原始数据 */
+function normalizeRemote(payload) {
+  const src = payload || {};
+  const srcModules = src.modules || src;
+  const modules = {};
+  MODULE_KEYS.forEach(k => {
+    const v = srcModules[k];
+    modules[k] = Array.isArray(v) ? v.filter(x => x && x.id) : [];
+  });
+  const tombstones = {};
+  const t = src.tombstones || src._deleted;
+  if (t && typeof t === 'object') Object.keys(t).forEach(id => { if (typeof t[id] === 'string') tombstones[id] = t[id]; });
+  // 卡片顺序：兼容 { keys, updatedAt } 与纯数组两种写法
+  const o = src.order || src._order;
+  let order = null;
+  if (Array.isArray(o)) order = { keys: o, updatedAt: '' };
+  else if (o && Array.isArray(o.keys)) order = { keys: o.keys, updatedAt: o.updatedAt || '' };
+  return { modules, tombstones, order };
+}
+
+/* 带超时的请求：避免网络卡住时同步按钮一直处于"同步中" */
+async function ghFetch(url, opts) {
+  const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 15000) : null;
+  try {
+    return await fetch(url, Object.assign({ cache: 'no-store' }, opts || {}, ctrl ? { signal: ctrl.signal } : {}));
+  } catch (e) {
+    if (e && e.name === 'AbortError') throw new Error('请求超时（15 秒），请检查网络后重试');
+    throw new Error('网络请求失败，请检查网络连接');
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/* 云端读取 */
+async function fetchRemote() {
+  const id = settings.gistId.trim();
+  const res = await ghFetch(GIST_API + '/' + encodeURIComponent(id), { headers: ghHeaders() });
+  if (!res.ok) throw await ghFail(res);
+  const gist = await res.json();
+  const files = gist.files || {};
+  const name = files[SYNC_FILE] ? SYNC_FILE : Object.keys(files)[0];
+  if (!name) throw new Error('该 Gist 里没有文件');
+  let content = files[name].content;
+  if (files[name].truncated && files[name].raw_url) {          // 文件过大时用 raw 地址取全文
+    const raw = await ghFetch(files[name].raw_url);
+    if (raw.ok) content = await raw.text();
+  }
+  try { return normalizeRemote(JSON.parse(content || '{}')); }
+  catch (e) { throw new Error('云端内容不是本工作台的数据文件'); }
+}
+
+/* 云端写入（没有 Gist ID 时自动新建私密 Gist） */
+async function saveRemote(modules, tombstones, order) {
+  const payload = { app: 'mint-workbench', version: 1, updatedAt: nowISO(), modules, tombstones, order: order || readOrderMeta() };
+  const files = {};
+  files[SYNC_FILE] = { content: JSON.stringify(payload, null, 2) };
+
+  const hasId = !!settings.gistId.trim();
+  const body = { description: '薄荷工作台数据（自动同步 · ' + todayStr() + '）', files };
+  if (!hasId) body.public = false;
+
+  const res = await ghFetch(hasId ? GIST_API + '/' + encodeURIComponent(settings.gistId.trim()) : GIST_API, {
+    method: hasId ? 'PATCH' : 'POST',
+    headers: Object.assign({ 'Content-Type': 'application/json' }, ghHeaders()),
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw await ghFail(res);
+  const gist = await res.json();
+  if (!hasId) { settings.gistId = gist.id; saveSettings(); }
+  return gist;
+}
+
+/* ---------- 合并算法：新增互并、按 id 去重、冲突交用户决定 ---------- */
+function canon(obj) {
+  return JSON.stringify(Object.keys(obj).sort().map(k => [k, obj[k]]));
+}
+function stamp(it) { return it.updatedAt || it.createdAt || ''; }
+function isTombstoned(tom, it) { const d = tom[it.id]; return !!d && d >= stamp(it); }
+function pruneTombstones(tom) {
+  const limit = Date.now() - 180 * 86400000;   // 删除标记保留 180 天
+  const out = {};
+  Object.keys(tom).forEach(id => {
+    const t = Date.parse(tom[id]);
+    if (!isNaN(t) && t >= limit) out[id] = tom[id];
+  });
+  return out;
+}
+
+function mergeWorkbench(local, remote) {
+  // 1) 合并双方删除标记（取较晚时间）
+  const tom = Object.assign({}, remote.tombstones || {});
+  Object.keys(local.tombstones || {}).forEach(id => {
+    const a = tom[id], b = local.tombstones[id];
+    if (!a || b > a) tom[id] = b;
+  });
+
+  const modules = {}, conflicts = [];
+  let addedFromCloud = 0, localOnly = 0, removed = 0;
+
+  MODULE_KEYS.forEach(key => {
+    const localArr = local.modules[key] || [];
+    const remoteArr = remote.modules[key] || [];
+    const remoteMap = new Map(remoteArr.map(it => [it.id, it]));
+    const seen = new Set();
+    const out = [];
+
+    // 以本地为基准
+    localArr.forEach(li => {
+      seen.add(li.id);
+      const ri = remoteMap.get(li.id);
+      if (!ri) {
+        if (isTombstoned(tom, li)) { removed++; return; }        // 云端删过 → 本地也删
+        out.push(li); localOnly++;                                // 本地独有 → 待上传
+        return;
+      }
+      if (canon(li) === canon(ri)) { out.push(li); return; }      // 完全相同 → 去重
+      const remoteNewer = stamp(ri) > stamp(li);                  // 同一条两边都改过 → 冲突
+      conflicts.push({ key, id: li.id, local: li, remote: ri, defaultTo: remoteNewer ? 'remote' : 'local' });
+      out.push(remoteNewer ? ri : li);
+    });
+
+    // 云端独有的记录
+    remoteArr.forEach(ri => {
+      if (seen.has(ri.id)) return;
+      if (isTombstoned(tom, ri)) { removed++; return; }            // 本地删过 → 不拉回
+      out.push(ri); addedFromCloud++;
+    });
+
+    modules[key] = out;
+  });
+
+  return {
+    modules, tombstones: pruneTombstones(tom), order: pickOrder(local.order, remote.order),
+    conflicts, addedFromCloud, localOnly, removed
+  };
+}
+
+/* 按用户选择把冲突项定版 */
+function resolveMerged(merged, decisions) {
+  merged.conflicts.forEach((c, i) => {
+    const choice = decisions[i] || c.defaultTo;
+    const arr = merged.modules[c.key];
+    const idx = arr.findIndex(x => x.id === c.id);
+    if (idx > -1) arr[idx] = (choice === 'remote') ? c.remote : c.local;
+  });
+}
+function applyMerged(modules, tombstones, order) {
+  MODULE_KEYS.forEach(k => { db[k] = Array.isArray(modules[k]) ? modules[k] : []; });
+  db._deleted = tombstones || {};
+  // 卡片顺序：合并结果里有就采用（较新的一方的布局）
+  if (order && Array.isArray(order.keys) && order.keys.length) {
+    db._order = { keys: normalizeOrder(order.keys), updatedAt: order.updatedAt || nowISO() };
+  }
+  saveDB();
+  refresh();
+}
+
+/* ---------- 冲突选择弹窗 ---------- */
+let conflictResolver = null;   // 当前等待用户选择的冲突弹窗
+
+/* 统一的关闭入口：保证 Promise 一定被 settle，不会让同步卡住 */
+function closeConflict(val) {
+  const resolve = conflictResolver;
+  conflictResolver = null;
+  $('#cfMask').classList.remove('show');
+  if (resolve) resolve(val);
+}
+
+function openConflictModal(merged) {
+  closeConflict(null);              // 若上一次弹窗还开着，先干净地取消
+  return new Promise(resolve => {
+    conflictResolver = resolve;
+    const cf = merged.conflicts;
+    $('#cfTitle').textContent = '检测到 ' + cf.length + ' 处冲突';
+
+    const rows = cf.map((c, i) => {
+      const m = MODULES[c.key];
+      return '<div class="conflict" data-idx="' + i + '">' +
+        '<div class="cf-head">' + m.icon + ' ' + m.name + ' · ' + esc(m.title(c.local)) +
+          ' <span>同一条记录在本地与云端内容不同</span></div>' +
+        '<div class="choice">' +
+          '<label><input type="radio" name="cf' + i + '" value="local"' + (c.defaultTo === 'local' ? ' checked' : '') + '>' +
+            '本地版本 <i>' + esc(fmtTime(c.local.updatedAt || c.local.createdAt)) + '</i></label>' +
+          '<label><input type="radio" name="cf' + i + '" value="remote"' + (c.defaultTo === 'remote' ? ' checked' : '') + '>' +
+            '云端版本 <i>' + esc(fmtTime(c.remote.updatedAt || c.remote.createdAt)) + '</i></label>' +
+        '</div></div>';
+    }).join('');
+
+    $('#cfBody').innerHTML =
+      '<div class="conflict-tools">' +
+        '<button class="btn ghost sm" id="cfAllLocal">全部保留本地</button>' +
+        '<button class="btn ghost sm" id="cfAllRemote">全部使用云端</button>' +
+        '<span class="tip">默认已勾选较新的版本，可按条调整</span>' +
+      '</div><div class="conflict-list">' + rows + '</div>';
+
+    $('#cfAllLocal').onclick = () => $('#cfBody').querySelectorAll('input[value="local"]').forEach(r => { r.checked = true; });
+    $('#cfAllRemote').onclick = () => $('#cfBody').querySelectorAll('input[value="remote"]').forEach(r => { r.checked = true; });
+    $('#cfApply').onclick = () => {
+      const decisions = {};
+      $('#cfBody').querySelectorAll('.conflict').forEach(row => {
+        const i = Number(row.dataset.idx);
+        const checked = row.querySelector('input:checked');
+        decisions[i] = checked ? checked.value : cf[i].defaultTo;
+      });
+      closeConflict(decisions);
+    };
+    $('#cfCancel').onclick = () => closeConflict(null);
+    $('#cfClose').onclick = () => closeConflict(null);
+    $('#cfMask').classList.add('show');
+  });
+}
+
+/* ---------- 同步主流程（拉取 / 保存） ---------- */
+let syncing = false;
+
+function setSyncButtons(busy) {
+  document.querySelectorAll('[data-sync]').forEach(el => {
+    if (!el.dataset.label) el.dataset.label = el.textContent;
+    el.disabled = busy;
+    el.classList.toggle('busy', busy);
+    el.textContent = busy ? '同步中…' : el.dataset.label;
+  });
+}
+
+async function runSync(mode) {
+  if (syncing) return;
+  if (!settings.token.trim()) { toast('请先在设置里填写 GitHub Token'); go('settings'); return; }
+  if (mode === 'pull' && !settings.gistId.trim()) { toast('请先填写 Gist ID，或点「保存同步」自动创建'); go('settings'); return; }
+  if (!navigator.onLine) { toast('当前离线，数据已保存在本机，联网后再同步'); return; }
+
+  syncing = true;
+  setSyncButtons(true);
+  try {
+    // 1) 取云端（首次保存时云端为空）
+    const remote = (mode === 'push' && !settings.gistId.trim())
+      ? { modules: {}, tombstones: {}, order: null }
+      : await fetchRemote();
+
+    // 2) 合并
+    const beforeOrder = readOrderMeta().keys.join();
+    const merged = mergeWorkbench(collectLocal(), remote);
+
+    // 3) 有冲突则交给用户选择
+    if (merged.conflicts.length) {
+      const decisions = await openConflictModal(merged);
+      if (!decisions) { toast('已取消同步，本地数据未改动'); return; }
+      resolveMerged(merged, decisions);
+    }
+
+    // 4) 写入本地（含卡片顺序）
+    applyMerged(merged.modules, merged.tombstones, merged.order);
+    const layoutChanged = readOrderMeta().keys.join() !== beforeOrder;
+
+    // 5) 保存模式：把合并结果推回云端
+    const msg = mode === 'push' ? '已合并并同步到云端' : '已从云端拉取并合并';
+    if (mode === 'push') await saveRemote(merged.modules, merged.tombstones, merged.order);
+
+    settings.lastSync = nowISO();
+    settings.lastResult = msg + '；云端新增 ' + merged.addedFromCloud + ' 条，待上传 ' + merged.localOnly +
+      ' 条' + (merged.conflicts.length ? '，处理冲突 ' + merged.conflicts.length + ' 条' : '') +
+      (merged.removed ? '，同步删除 ' + merged.removed + ' 条' : '') +
+      (layoutChanged ? '，已采用云端卡片顺序' : '');
+    saveSettings();
+    renderSyncState();
+    toast(msg + (merged.conflicts.length ? '，已处理 ' + merged.conflicts.length + ' 处冲突' : '') +
+      (layoutChanged ? '，布局顺序已更新' : ''));
+  } catch (e) {
+    settings.lastResult = '同步失败：' + e.message;
+    saveSettings();
+    renderSyncState();
+    toast('同步失败：' + e.message);
+  } finally {
+    syncing = false;
+    setSyncButtons(false);
+  }
+}
+
+/* ---------- 侧边栏同步状态 ---------- */
+function renderSyncState() {
+  const el = $('#syncState');
+  if (!el) return;
+  if (!navigator.onLine) { el.innerHTML = '离线 · 仅本地可用'; return; }
+  if (!configuredCloud()) { el.innerHTML = '未配置云端同步'; return; }
+  el.innerHTML = '云端已连接<br><b>' + (settings.lastSync ? fmtTime(settings.lastSync) + ' 已同步' : '等待首次同步') + '</b>';
+}
+
+/* ---------------- 11. 设置页 ---------------- */
+function panelHTML(title, sub, body, extraClass) {
+  return '<section class="panel ' + (extraClass || '') + '">' +
+    '<div class="panel-title">' + title + '</div>' +
+    (sub ? '<div class="panel-sub">' + sub + '</div>' : '') + body + '</section>';
+}
+
+function renderSettings() {
+  $('#pageTitle').textContent = '⚙️ 设置 · 云端同步';
+  $('#pageDesc').textContent = '通过 GitHub Gist 在设备之间同步全部模块数据';
+  $('#topbarActions').innerHTML =
+    '<button class="btn ghost sm" data-sync="pull">☁ 云端拉取</button>' +
+    '<button class="btn primary sm" data-sync="push">⤴ 保存同步</button>';
+
+  const online = navigator.onLine;
+  const localCount = MODULE_KEYS.reduce((n, k) => n + (db[k] ? db[k].length : 0), 0);
+  const tomCount = Object.keys(db._deleted || {}).length;
+
+  const connPanel = panelHTML('连接设置', 'Token 只保存在本机浏览器，不会上传到任何第三方服务器', '' +
+    '<div class="grid-2">' +
+      '<div class="field"><label>GitHub Token（需 gist 权限）</label>' +
+        '<div class="pw-wrap">' +
+          '<input type="password" id="setToken" autocomplete="off" spellcheck="false" placeholder="ghp_... / github_pat_..." value="' + esc(settings.token) + '">' +
+          '<button class="btn ghost sm" id="toggleToken">显示</button>' +
+        '</div></div>' +
+      '<div class="field"><label>Gist ID</label>' +
+        '<input type="text" id="setGist" autocomplete="off" spellcheck="false" placeholder="留空则「保存同步」时自动创建" value="' + esc(settings.gistId) + '">' +
+      '</div>' +
+    '</div>' +
+    '<div class="field" style="margin-top:14px"><label class="cb">' +
+      '<input type="checkbox" id="setAuto"' + (settings.autoPull ? ' checked' : '') + '>' +
+      '<span>打开工作台时自动从云端合并一次；网络恢复后也自动同步</span></label></div>' +
+    '<div class="field"><label class="cb">' +
+      '<input type="checkbox" id="setNotify"' + (settings.notify ? ' checked' : '') + '>' +
+      '<span>考试倒计时桌面提醒（进入提醒天数时发一条系统通知，首次开启需授权）</span></label></div>' +
+    '<div class="hint" style="margin-top:12px">数据文件固定为 <code>' + SYNC_FILE + '</code>，存放在你自己的 Gist 里；' +
+      '不同设备填写同一个 Token 与 Gist ID 即可互通。修改后自动保存。</div>');
+
+  const statePanel = panelHTML('同步状态', '', '' +
+    '<div class="kv">' +
+      '<div><span>网络</span><b><span class="dot ' + (online ? '' : 'off') + '"></span>' + (online ? '在线' : '离线（数据仅存本机）') + '</b></div>' +
+      '<div><span>本地记录</span><b>' + localCount + ' 条</b></div>' +
+      '<div><span>删除标记</span><b>' + tomCount + ' 条</b></div>' +
+      '<div><span>最后同步</span><b>' + (settings.lastSync ? fmtTime(settings.lastSync) : '尚未同步') + '</b></div>' +
+    '</div>' +
+    (settings.lastResult ? '<div class="hint" style="margin-top:10px">上次结果：' + esc(settings.lastResult) + '</div>' : '') +
+    (settings.gistId ? '<div class="hint" style="margin-top:8px">Gist 地址：' +
+      '<a href="https://gist.github.com/' + esc(settings.gistId) + '" target="_blank" rel="noopener">gist.github.com/' + esc(settings.gistId) + '</a></div>' : '') +
+    '<div class="hint" style="margin-top:14px">' +
+      '<button class="btn ghost sm" data-sync="pull">☁ 云端拉取</button> ' +
+      '<button class="btn primary sm" data-sync="push">⤴ 保存同步</button></div>');
+
+  const keys = orderedKeys();
+  const layoutPanel = panelHTML('界面布局', '仪表盘的卡片顺序会随同步在设备之间保持一致', '' +
+    '<div class="order-list">' + keys.map((k, i) =>
+      '<span class="order-chip">' + MODULES[k].icon + ' ' + esc(MODULES[k].name) +
+      '<button class="ord-btn" data-move="up" data-key="' + k + '" title="上移"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+      '<button class="ord-btn" data-move="down" data-key="' + k + '" title="下移"' + (i === keys.length - 1 ? ' disabled' : '') + '>↓</button>' +
+      '</span>').join('') + '</div>' +
+    '<div class="hint" style="margin-top:14px">' +
+      '在首页仪表盘按住卡片左上角的手柄拖动即可调整顺序（手机触屏同样可以拖），' +
+      '侧边导航会自动跟随这个顺序。' +
+      '<button class="btn ghost sm" id="resetOrder" style="margin-left:8px">恢复默认顺序</button>' +
+    '</div>');
+
+  const helpPanel = panelHTML('使用说明', '', '<div class="hint"><ol>' +
+    '<li>GitHub → 头像 → Settings → Developer settings → Personal access tokens，新建 Token 并勾选 <code>gist</code> 权限。</li>' +
+    '<li>把 Token 粘贴到上方输入框（仅存本机）。</li>' +
+    '<li>第一次用：Gist ID 留空，点「保存同步」→ 自动创建私密 Gist 并回填 ID。</li>' +
+    '<li>换设备：填同一个 Token 与 Gist ID → 点「云端拉取」，数据合并过来。</li>' +
+    '<li>合并规则：两边新增的记录自动合并、按 id 去重；同一条记录两边都改过才算冲突，弹窗由你选版本。</li>' +
+    '<li>删除也会同步（保留 180 天删除标记），不会出现删掉的记录又从云端跑回来。</li>' +
+    '<li>仪表盘卡片顺序同样会同步，以「最近调整过布局的那台设备」为准；新设备首次同步会自动套用云端布局。</li>' +
+    '<li>离线照常记录，联网后再点一次同步即可。</li>' +
+    '</ol></div>');
+
+  $('#view').innerHTML = '<div class="stack">' + connPanel + statePanel + layoutPanel + helpPanel + '</div>';
+
+  // 设置项即时保存
+  const persist = () => { saveSettings(); renderSyncState(); renderNav(); };
+  $('#setToken').addEventListener('input', e => { settings.token = e.target.value.trim(); persist(); });
+  $('#setGist').addEventListener('input', e => { settings.gistId = e.target.value.trim(); persist(); });
+  $('#setAuto').addEventListener('change', e => {
+    settings.autoPull = e.target.checked;
+    persist();
+    toast(e.target.checked ? '已开启自动同步' : '已关闭自动同步');
+  });
+  $('#setNotify').addEventListener('change', async e => {
+    const on = e.target.checked;
+    settings.notify = on;
+    saveSettings();
+    if (!on) { toast('已关闭桌面提醒'); return; }
+    if (await askNotifyPermission()) {
+      toast('已开启考试倒计时提醒');
+      maybeNotifyExams();
+    } else {
+      settings.notify = false;
+      e.target.checked = false;
+      saveSettings();
+    }
+  });
+  $('#toggleToken').addEventListener('click', () => {
+    const el = $('#setToken');
+    const show = el.type === 'password';
+    el.type = show ? 'text' : 'password';
+    $('#toggleToken').textContent = show ? '隐藏' : '显示';
+  });
+
+  // 布局：↑↓ 微调 与 恢复默认
+  $('#view').querySelectorAll('[data-move]').forEach(btn => {
+    btn.addEventListener('click', () => moveModule(btn.dataset.key, btn.dataset.move));
+  });
+  const resetBtn = $('#resetOrder');
+  if (resetBtn) resetBtn.addEventListener('click', () => {
+    if (confirm('确定恢复默认的卡片顺序吗？')) resetOrder();
+  });
+}
+
+/* ---------------- 12. 仪表盘卡片顺序与拖拽排序 ---------------- */
+/* 规范化顺序：过滤未知模块、补齐新增模块 */
+function normalizeOrder(keys) {
+  const out = [];
+  (Array.isArray(keys) ? keys : []).forEach(k => {
+    if (MODULE_KEYS.indexOf(k) > -1 && out.indexOf(k) < 0) out.push(k);
+  });
+  MODULE_KEYS.forEach(k => { if (out.indexOf(k) < 0) out.push(k); });
+  return out;
+}
+/* 当前生效顺序（含同步用的更新时间） */
+function readOrderMeta() {
+  const o = db._order;
+  if (!o || !Array.isArray(o.keys) || !o.keys.length) {
+    return { keys: MODULE_KEYS.slice(), updatedAt: (o && o.updatedAt) || '' };
+  }
+  return { keys: normalizeOrder(o.keys), updatedAt: o.updatedAt || '' };
+}
+function orderedKeys() { return readOrderMeta().keys; }
+function setOrder(keys) {
+  db._order = { keys: normalizeOrder(keys), updatedAt: nowISO() };
+  saveDB();
+}
+function resetOrder() {
+  setOrder(MODULE_KEYS);
+  renderNav();
+  renderDashboard();
+  toast('已恢复默认顺序');
+}
+/* 设置页里的 ↑↓ 微调 */
+function moveModule(key, dir) {
+  const keys = orderedKeys();
+  const i = keys.indexOf(key);
+  const j = dir === 'up' ? i - 1 : i + 1;
+  if (i < 0 || j < 0 || j >= keys.length) return;
+  keys[i] = keys[j];
+  keys[j] = key;
+  setOrder(keys);
+  renderNav();
+  renderSettings();
+}
+/* 同步合并：顺序以更新时间较新的一方为准（时间相同则保留本地） */
+function pickOrder(a, b) {
+  const ok = o => !!(o && Array.isArray(o.keys) && o.keys.length);
+  if (!ok(a)) return ok(b) ? b : null;
+  if (!ok(b)) return a;
+  const at = Date.parse(a.updatedAt || '') || 0;
+  const bt = Date.parse(b.updatedAt || '') || 0;
+  if (at === bt) return a;
+  return bt > at ? b : a;
+}
+
+/* ---------- 拖拽交互：鼠标 + 触屏（vivo Y78 等手机同样可用） ---------- */
+const DRAG_THRESHOLD = 4;   // 鼠标按住后移动超过该距离才算“拖拽”
+let dragState = null;       // 拖拽中的状态
+let pendingDrag = null;     // 鼠标已按下但还没达到阈值
+
+function dashboardGrid() {
+  return state.page === 'dashboard' ? document.querySelector('#view .grid') : null;
+}
+function gridKeys(grid) {
+  return Array.prototype.map.call(grid.children, el => (el.dataset ? el.dataset.module : null)).filter(Boolean);
+}
+
+function startDrag(panel, e) {
+  const rect = panel.getBoundingClientRect();
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  ghost.style.width = rect.width + 'px';
+  ghost.style.height = rect.height + 'px';
+  ghost.style.transform = 'translate(' + rect.left + 'px,' + rect.top + 'px)';
+  const inner = panel.cloneNode(true);
+  inner.classList.add('drag-lift');
+  ghost.appendChild(inner);
+  document.body.appendChild(ghost);
+
+  panel.classList.add('drag-src');
+  document.body.classList.add('dragging');
+  try { if (window.getSelection) window.getSelection().removeAllRanges(); } catch (err) { /* 忽略 */ }
+
+  dragState = {
+    panel, ghost, inner,
+    pointerId: e.pointerId,
+    startX: e.clientX, startY: e.clientY,
+    lastX: e.clientX, lastY: e.clientY,
+    startRect: rect,
+    startOrderMeta: JSON.parse(JSON.stringify(db._order || { keys: [], updatedAt: '' })),
+    moved: false,
+    raf: 0
+  };
+  dragState.raf = requestAnimationFrame(dragTick);
+  dragListeners(true);
+}
+
+function moveGhost() {
+  const d = dragState, r = d.startRect;
+  d.ghost.style.transform = 'translate(' +
+    (r.left + d.lastX - d.startX) + 'px,' + (r.top + d.lastY - d.startY) + 'px)';
+}
+
+/* 指针落在卡片之间的空隙时，取中心最近的一张卡片 */
+function nearestPanel(grid, x, y) {
+  let best = null, bd = Infinity;
+  Array.prototype.forEach.call(grid.children, el => {
+    if (!el.classList || !el.classList.contains('panel')) return;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2 - x, cy = r.top + r.height / 2 - y;
+    const d = cx * cx + cy * cy;
+    if (d < bd) { bd = d; best = el; }
+  });
+  return best;
+}
+
+/* 指针移到哪张卡片上，就把空位插到那边（左半边插前、右半边插后） */
+function updateDropTarget(x, y) {
+  const d = dragState;
+  const grid = d.panel.parentNode;
+  if (!grid) return;
+
+  const under = document.elementFromPoint(x, y);
+  let target = under && under.closest ? under.closest('.panel') : null;
+  if (target && target.parentNode !== grid) target = null;
+  if (!target) {
+    const gr = grid.getBoundingClientRect();          // 落在卡片间隙 / 网格外
+    if (x < gr.left - 40 || x > gr.right + 40 || y < gr.top - 40 || y > gr.bottom + 40) return;
+    target = nearestPanel(grid, x, y);
+  }
+  if (!target || target === d.panel) return;
+
+  const r = target.getBoundingClientRect();
+  if ((x - r.left) < r.width / 2) {
+    if (target.previousElementSibling === d.panel) return;
+    flipReorder(grid, () => grid.insertBefore(d.panel, target));
+  } else {
+    if (target.nextElementSibling === d.panel) return;
+    flipReorder(grid, () => grid.insertBefore(d.panel, target.nextElementSibling));
+  }
+}
+
+/* FLIP：其余卡片平滑让位。用 offsetLeft/Top 取排版位置，避免受进行中的动画干扰 */
+function flipReorder(grid, mutate) {
+  const items = Array.prototype.filter.call(grid.children, el => el.classList && el.classList.contains('panel'));
+  const from = items.map(el => ({ el, l: el.offsetLeft, t: el.offsetTop }));
+  mutate();
+  from.forEach(item => {
+    const el = item.el;
+    const dx = item.l - el.offsetLeft;
+    const dy = item.t - el.offsetTop;
+    if (!dx && !dy) return;
+    el.dataset.flip = String((Number(el.dataset.flip) || 0) + 1);
+    const token = el.dataset.flip;
+    el.style.transition = 'none';
+    el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    requestAnimationFrame(() => {
+      if (!el.isConnected || el.dataset.flip !== token) return;
+      el.style.transition = 'transform .18s ease';
+      el.style.transform = '';
+    });
+  });
+}
+
+/* 拖到屏幕上下边缘时自动滚动 */
+function dragTick() {
+  const d = dragState;
+  if (!d) return;
+  if (d.moved) {
+    const sc = document.querySelector('.main');
+    const edge = 96, vh = window.innerHeight;
+    let dy = 0;
+    if (d.lastY < edge) dy = (d.lastY - edge) * 0.4;
+    else if (d.lastY > vh - edge) dy = (d.lastY - (vh - edge)) * 0.4;
+    if (dy && sc) {
+      const before = sc.scrollTop;
+      sc.scrollTop = before + dy;
+      if (sc.scrollTop !== before) updateDropTarget(d.lastX, d.lastY);
+    }
+  }
+  d.raf = requestAnimationFrame(dragTick);
+}
+
+function onDragMove(e) {
+  if (pendingDrag) {
+    if (Math.abs(e.clientX - pendingDrag.x) <= DRAG_THRESHOLD &&
+        Math.abs(e.clientY - pendingDrag.y) <= DRAG_THRESHOLD) return;
+    const p = pendingDrag;
+    pendingDrag = null;
+    startDrag(p.panel, e);
+  }
+  const d = dragState;
+  if (!d) return;
+  d.moved = true;
+  d.lastX = e.clientX;
+  d.lastY = e.clientY;
+  moveGhost();
+  updateDropTarget(e.clientX, e.clientY);
+}
+
+function onDragUp() {
+  if (pendingDrag) { pendingDrag = null; dragListeners(false); return; }
+  if (dragState) finishDrag(false);
+}
+
+function onDragCancel() {
+  if (pendingDrag) { pendingDrag = null; dragListeners(false); return; }
+  if (dragState) finishDrag(true);
+}
+
+function finishDrag(cancelled) {
+  const d = dragState;
+  if (!d) return;
+  dragState = null;
+  if (d.raf) cancelAnimationFrame(d.raf);
+  dragListeners(false);
+  document.body.classList.remove('dragging');
+
+  if (cancelled) {                       // 取消：完全还原（不写入新的更新时间）
+    d.ghost.remove();
+    db._order = d.startOrderMeta;
+    saveDB();
+    renderNav();
+    renderDashboard();
+    toast('已取消调整');
+    return;
+  }
+  if (!d.moved) {                        // 只是点了一下手柄，不做任何改变
+    d.ghost.remove();
+    d.panel.classList.remove('drag-src');
+    return;
+  }
+
+  // 立即落库（动画只是视觉收尾）
+  const grid = d.panel.parentNode;
+  const keys = grid ? gridKeys(grid) : [];
+  const changed = !!keys.length && keys.join() !== d.startOrderMeta.keys.join();
+  if (changed) { setOrder(keys); renderNav(); }
+
+  // 浮起的卡片平滑落回空位
+  const r = d.panel.getBoundingClientRect();
+  d.ghost.style.transition = 'transform .18s ease';
+  d.inner.style.transform = 'scale(1)';
+  d.ghost.style.transform = 'translate(' + r.left + 'px,' + r.top + 'px)';
+
+  const ghost = d.ghost, panel = d.panel;
+  setTimeout(() => {
+    ghost.remove();
+    panel.classList.remove('drag-src');
+    if (dragState) return;               // 又开始了新的拖拽，先不重建 DOM
+    renderDashboard();
+    if (changed) toast('已调整模块顺序');
+  }, 190);
+}
+
+function dragListeners(on) {
+  const opt = true;                      // 捕获阶段，避免被其它逻辑打断
+  const fn = on ? document.addEventListener : document.removeEventListener;
+  fn.call(document, 'pointermove', onDragMove, opt);
+  fn.call(document, 'pointerup', onDragUp, opt);
+  fn.call(document, 'pointercancel', onDragCancel, opt);
+}
+
+/* 按下：手柄可直接拖；鼠标在卡片空白处按住并移动也能拖（触屏只用手柄，避免和页面滚动打架） */
+document.addEventListener('pointerdown', (e) => {
+  if (dragState || pendingDrag) return;
+  const grid = dashboardGrid();
+  if (!grid) return;
+  const panel = e.target.closest ? e.target.closest('.panel') : null;
+  if (!panel || !grid.contains(panel)) return;
+
+  if (e.target.closest('[data-drag]')) {
+    e.preventDefault();
+    startDrag(panel, e);
+    return;
+  }
+  if (e.pointerType === 'mouse' && e.button === 0 &&
+      !e.target.closest('button, a, input, select, textarea')) {
+    pendingDrag = { panel, x: e.clientX, y: e.clientY };
+    dragListeners(true);
+  }
+});
+
+/* ---------------- 13. 事件绑定 ---------------- */
+$('#nav').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-page]');
+  if (btn) go(btn.dataset.page);
+});
+
+$('#view').addEventListener('click', (e) => {
+  const goto = e.target.closest('[data-goto]');
+  if (goto) { go(goto.dataset.goto); return; }
+
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const { act, key, id } = btn.dataset;
+  if (act === 'edit') openModal(key, id);
+  else if (act === 'del') deleteItem(key, id);
+  else if (act === 'toggle') toggleItem(key, id);
+});
+
+/* 记账图表：切换查看收入 / 支出占比 */
+$('#view').addEventListener('change', (e) => {
+  if (e.target.id === 'pieType') {
+    state.pieType = e.target.value;
+    renderModule('account');
+  }
+});
+
+/* 各模块的数据导出（记账 → Excel） */
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-export]');
+  if (!b) return;
+  if (b.dataset.export === 'account') exportAccountXlsx();
+});
+
+/* 所有同步按钮（侧边栏、设置页、顶栏）统一走这里 */
+document.addEventListener('click', (e) => {
+  const s = e.target.closest('[data-sync]');
+  if (s && !s.disabled) runSync(s.dataset.sync);
+});
+
+$('#modalSave').addEventListener('click', saveModal);
+$('#modalCancel').addEventListener('click', closeModal);
+$('#modalClose').addEventListener('click', closeModal);
+$('#mask').addEventListener('click', (e) => { if (e.target === $('#mask')) closeModal(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && (dragState || pendingDrag)) { onDragCancel(); return; }   // 拖拽中按 Esc 取消
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && $('#mask').classList.contains('show')) { saveModal(); return; }
+  if (e.key !== 'Escape') return;
+  if ($('#cfMask').classList.contains('show')) closeConflict(null);   // 取消同步，本地数据不变
+  else if ($('#mask').classList.contains('show')) closeModal();
+});
+$('#cfMask').addEventListener('click', (e) => { if (e.target === $('#cfMask')) closeConflict(null); });
+
+$('#exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '薄荷工作台备份-' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('已导出备份文件');
+});
+
+$('#clearBtn').addEventListener('click', () => {
+  if (!confirm('确定清空全部本地数据吗？该操作不可恢复，建议先导出备份。')) return;
+  db = withMeta(clone(EMPTY_DB));
+  saveDB();
+  toast('已清空全部数据');
+  go('dashboard');
+});
+
+/* ---------------- 14. 初始化 ---------------- */
+(function init() {
+  if (!localStorage.getItem(STORAGE_KEY) && db.todo.length === 0 && db.memo.length === 0) {
+    // 首次使用写入一条示例，帮助快速上手
+    db.memo.push({ id: uid(), createdAt: nowISO(), content: '欢迎使用薄荷工作台 🌿 所有数据保存在本机浏览器中。' });
+    saveDB();
+  }
+  renderNav();
+  renderDashboard();
+  renderSyncState();
+
+  // 考试倒计时提醒：页面内提示 + 可选的系统通知
+  const rem = examReminders();
+  if (rem.length) {
+    const first = rem[0];
+    setTimeout(() => toast('⏰ ' + first.i.name + ' 还有 ' + first.d + ' 天'), 900);
+  }
+  maybeNotifyExams();
+
+  // 离线可用：联网状态变化时更新提示，并在网络恢复后自动同步
+  window.addEventListener('online', () => {
+    renderSyncState();
+    if (state.page === 'settings') renderSettings();
+    toast('网络已恢复');
+    if (settings.autoPull && configuredCloud()) runSync('pull');
+  });
+  window.addEventListener('offline', () => {
+    renderSyncState();
+    if (state.page === 'settings') renderSettings();
+    toast('已进入离线模式，数据仍保存在本机');
+  });
+
+  // 打开时自动合并一次
+  if (settings.autoPull && configuredCloud() && navigator.onLine) {
+    setTimeout(() => runSync('pull'), 1200);
+  }
+
+  // PWA：仅在 http(s) 环境下注册 Service Worker（直接双击本地文件时自动跳过）
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* 忽略注册失败 */ });
+    });
+  }
+})();
+</script>
+</body>
+</html>

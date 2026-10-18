@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="薄荷工作台">
+  <defs>
+    <linearGradient id="gm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8fd9ae"/>
+      <stop offset="1" stop-color="#57b47d"/>
+    </linearGradient>
+  </defs>
+  <!-- 满幅背景，图形收在安全区内，适配 Android 的圆形/方形裁切 -->
+  <rect width="512" height="512" fill="url(#gm)"/>
+  <g transform="translate(256 256) scale(0.72) translate(-256 -256)">
+    <path d="M256 118c66 0 112 44 112 106 0 74-56 122-112 170-56-48-112-96-112-170 0-62 46-106 112-106z"
+          fill="#ffffff" opacity="0.95"/>
+    <path d="M256 168v168" stroke="#57b47d" stroke-width="14" stroke-linecap="round"/>
+    <path d="M256 236l58-42M256 300l-58-42" stroke="#8fd9ae" stroke-width="14" stroke-linecap="round"/>
+  </g>
+</svg>
